@@ -1,0 +1,11 @@
+MYLIBRARY_1.0 {
+    global:
+		afterLoad;
+		onLoopBegin;
+		onLoopEnd;
+		beforeUnload;
+		onFrameLogic;
+		onRecPacket;
+    local:
+        *;
+};

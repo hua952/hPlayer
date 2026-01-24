@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<powerCom>0</powerCom>
+<struct>
+</struct>
+<rpc>
+    <playerData>
+        <seekPos>
+            <ask>
+                <pos dataType="double"/>
+            </ask>
+            <ret>
+                <pos dataType="double"/>
+            </ret>
+        </seekPos>
+        <playURL>
+            <ask>
+                <url dataType="char" length="512" haveSize="1" zeroEnd="1" commit="文件名或网址"/>
+            </ask>
+            <ret>
+                <totalDuration dataType="double"/>
+                <result dataType="udword"/>
+            </ret>
+        </PlayURL>
+    </playerData>
+</rpc>

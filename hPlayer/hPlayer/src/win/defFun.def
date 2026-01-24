@@ -1,0 +1,9 @@
+LIBRARY
+EXPORTS
+	afterLoad	@1
+	onLoopBegin		@2
+	onLoopEnd		@3
+	beforeUnload	@4
+	onFrameLogic	@5
+	onRecPacket     @6
+	

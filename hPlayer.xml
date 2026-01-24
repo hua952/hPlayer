@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<servers>
+    <defMsg file="hPlayerMsg.xml"/>
+    <configDef>hPlayerConfigDef.xml</configDef >
+    <app>
+        <hPlayer appNetType="0">
+            <server>
+                <main mainLoop="1">
+                    <procRpc>
+                        <seekPos askType="ret"/>
+                        <playURL askType="ret"/>
+                    </procRpc>
+                </main>
+                <decoTh>
+                    <procRpc>
+                        <seekPos askType="ask"/>
+                        <playURL askType="ask"/>
+                    </procRpc>
+                </decoTh>
+            </server>
+        </hPlayer>
+    </app>
+</servers>
+

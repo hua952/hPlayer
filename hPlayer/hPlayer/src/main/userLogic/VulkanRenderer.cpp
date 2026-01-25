@@ -27,6 +27,8 @@ extern "C" {
 }
 // #include "playerDataRpc.h"
 #include "globalData.h"
+#include "gLog.h"
+
 // === GLSL sources ===
 // Driver conversion fragment (single combined sampler)
 static const char* kFragYcbcrGLSL = R"glsl(
@@ -125,26 +127,87 @@ void          VulkanRenderer:: setState(renderState st)
     m_renderState = st;
 }
 
-bool  VulkanRenderer:: presentNV12(const videoFrameData& vf)
+int  VulkanRenderer:: onLoopFrame()
 {
+    int  nRet = 0;
+    do {
         if (VulkanRenderer::renderState_OK != state()) [[unlikely]]{
-            return true;
+            break;
         }
-        if (device == VK_NULL_HANDLE) [[unlikely]]return false;
-        if (!vf.m_planNum || extent.width == 0 || extent.height == 0) [[unlikely]]return false;
+        if (device == VK_NULL_HANDLE) [[unlikely]] {
+            break;
+        }
 
-        if (m_curVideoWidth != vf.m_width || m_curVideoHeight != vf.m_height) {
-            m_curVideoWidth = vf.m_width;
-            m_curVideoHeight = vf.m_height;
-            recreateSwapchain();
+        // VulkanRenderResources::Frame* frame = &renderRes.frames[renderRes.m_curFrameIndex];
+        udword nF = renderRes.frames.size();
+        for (decltype (nF) i = 0; i < nF; i++) {
+            auto& f = renderRes.frames[i];
+            if (!f.inFlight) {
+                f.inFlight = true;
+                nF = i;
+                break;
+            }
         }
+        if (nF >= renderRes.frames.size()) {
+            break;
+        }
+        renderRes.m_curFrameIndex = nF;
+        /*
         VulkanRenderResources::Frame* frame = nullptr;
         for (auto& f : renderRes.frames) {
             if (!f.inFlight) { frame = &f; break; }
         }
         if (!frame) [[unlikely]]return false;
         frame->inFlight = true;
+        */
+        auto& que = getDecodeRenderQueue();
+        auto pFrame = que.front ();
+        while(pFrame) {
+            auto& rAsk = *pFrame;
+            constexpr double SYNC_TOLERANCE = 0.05;
+            double audio_time = mainClockSec();
+            double video_time = rAsk.m_pts_seconds;
+            double diff = video_time - audio_time;
+            if (diff > SYNC_TOLERANCE) {
+                break; /* 太快 */
+            }
+            if (diff > -SYNC_TOLERANCE) [[likely]] {
+                bool ok = presentNV12(nullptr, rAsk);
+                if (!ok) [[unlikely]] {
+                    gError("present failed");
+                    nRet = 1;
+                    break;
+                }
+                que.pop();
+                break; /* 正常播放一帧 */
+            }  
+            que.pop();
+            pFrame = que.front ();
+            /* 丢弃过时的帧  */
+            gInfo(" delete time out frame");
+        }
+        if (nRet) {
+            break;
+        }
+        bool bRet = onDraw(nullptr);
+        if (bRet) {
+            //renderRes.m_curFrameIndex = (renderRes.m_curFrameIndex + 1) % renderRes.frames.size();
+        }
+    } while (0);
+    return nRet;
+}
 
+bool  VulkanRenderer:: presentNV12(VulkanRenderResources::Frame* frame2, const videoFrameData& vf)
+{
+        if (!vf.m_planNum || extent.width == 0 || extent.height == 0) [[unlikely]] {
+            return false;
+        }
+        if (m_curVideoWidth != vf.m_width || m_curVideoHeight != vf.m_height) {
+            m_curVideoWidth = vf.m_width;
+            m_curVideoHeight = vf.m_height;
+            recreateSwapchain();
+        }
+        VulkanRenderResources::Frame* frame = &renderRes.frames[renderRes.m_curFrameIndex];
         uint32_t yw = (uint32_t)vf.m_width;
         uint32_t yh = (uint32_t)vf.m_height;
         uint32_t uvw = (uint32_t)((vf.m_width + 1) / 2);
@@ -184,11 +247,15 @@ bool  VulkanRenderer:: presentNV12(const videoFrameData& vf)
 
         VkDeviceSize ySize = (VkDeviceSize)vf.m_y_planesize;
         createBuffer(ySize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingY, stagingYMem);
-        if (stagingY == VK_NULL_HANDLE) { frame->inFlight = false; return false; }
+        if (stagingY == VK_NULL_HANDLE) { 
+            frame->inFlight = false;
+            return false;
+        }
         void* mapPtr = nullptr;
         if (vkMapMemory(device, stagingYMem, 0, ySize, 0, &mapPtr) != VK_SUCCESS) {
             vkDestroyBuffer(device, stagingY, nullptr); vkFreeMemory(device, stagingYMem, nullptr);
-            frame->inFlight = false; return false;
+            frame->inFlight = false;
+            return false;
         }
         auto pPlaneData = vf.m_plan.get(); //&vf.m_plan[0];
         for (int row = 0; row < vf.m_height; ++row) {
@@ -200,12 +267,14 @@ bool  VulkanRenderer:: presentNV12(const videoFrameData& vf)
         createBuffer(uvSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingUV, stagingUVMem);
         if (stagingUV == VK_NULL_HANDLE) {
             vkDestroyBuffer(device, stagingY, nullptr); vkFreeMemory(device, stagingYMem, nullptr);
-            frame->inFlight = false; return false;
+            frame->inFlight = false;
+            return false;
         }
         if (vkMapMemory(device, stagingUVMem, 0, uvSize, 0, &mapPtr) != VK_SUCCESS) {
             vkDestroyBuffer(device, stagingY, nullptr); vkFreeMemory(device, stagingYMem, nullptr);
             vkDestroyBuffer(device, stagingUV, nullptr); vkFreeMemory(device, stagingUVMem, nullptr);
-            frame->inFlight = false; return false;
+            frame->inFlight = false;
+            return false;
         }
         for (int row = 0; row < (vf.m_height + 1) / 2; ++row) {
             memcpy((uint8_t*)mapPtr + (size_t)row * vf.m_uv_linesize, pUVPlaneData + (size_t)row * vf.m_uv_linesize, vf.m_uv_linesize);
@@ -328,7 +397,13 @@ bool  VulkanRenderer:: presentNV12(const videoFrameData& vf)
                 vkUpdateDescriptorSets(device, 2, wds, 0, nullptr);
             }
         }
+        return true;
+}
 
+bool VulkanRenderer:: onDraw(VulkanRenderResources::Frame* frame2)
+{
+    do {
+        VulkanRenderResources::Frame* frame = &renderRes.frames[renderRes.m_curFrameIndex];
         // Acquire, record draw and present
         uint32_t imageIndex;
         VkResult r = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, frame->imageAvailable, VK_NULL_HANDLE, &imageIndex);
@@ -336,20 +411,34 @@ bool  VulkanRenderer:: presentNV12(const videoFrameData& vf)
             recreateSwapchain();
             frame->inFlight = false;
             return false;
+            break;
         }
 
         if (r != VK_SUCCESS) {
             frame->inFlight = false;
             return false;
+            break;
         }
 
         VkCommandBuffer cmd = frame->cmdBuf;
-        if (cmd == VK_NULL_HANDLE) { frame->inFlight = false; return false; }
-        if (vkResetCommandBuffer(cmd, 0) != VK_SUCCESS) { frame->inFlight = false; return false; }
+        if (cmd == VK_NULL_HANDLE) {
+            frame->inFlight = false;
+            return false; 
+            break;
+        }
+        if (vkResetCommandBuffer(cmd, 0) != VK_SUCCESS) {
+            frame->inFlight = false;
+             return false;
+            break;
+        }
 
         VkCommandBufferBeginInfo bi{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        if (vkBeginCommandBuffer(cmd, &bi) != VK_SUCCESS) { frame->inFlight = false; return false; }
+        if (vkBeginCommandBuffer(cmd, &bi) != VK_SUCCESS) {
+            frame->inFlight = false;
+            return false;
+            break;
+        }
 
         VkRenderPassBeginInfo rpInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
         rpInfo.renderPass = renderRes.renderPass;
@@ -380,7 +469,7 @@ bool  VulkanRenderer:: presentNV12(const videoFrameData& vf)
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &cmd;
         submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &frame->renderFinished;
+        submitInfo.pSignalSemaphores =&renderRes.frames[imageIndex].renderFinished; //&frame->renderFinished;
 
         if (frame->fence == VK_NULL_HANDLE) {
             VkFenceCreateInfo fci{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -391,11 +480,12 @@ bool  VulkanRenderer:: presentNV12(const videoFrameData& vf)
         if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, frame->fence) != VK_SUCCESS) {
             frame->inFlight = false;
             return false;
+            break;
         }
 
         VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &frame->renderFinished;
+        presentInfo.pWaitSemaphores = &renderRes.frames[imageIndex].renderFinished; //&frame->renderFinished;
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &swapchain;
         presentInfo.pImageIndices = &imageIndex;
@@ -405,6 +495,8 @@ bool  VulkanRenderer:: presentNV12(const videoFrameData& vf)
         vkWaitForFences(device, 1, &frame->fence, VK_TRUE, UINT64_MAX);
         frame->inFlight = false;
         return true;
+        // renderRes.m_curFrameIndex = (renderRes.m_curFrameIndex + 1) % renderRes.frames.size();
+    } while (0);
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallbackFn(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -712,7 +804,6 @@ VkSurfaceCapabilitiesKHR caps{};
         extent.height = std::max(caps.minImageExtent.height, std::min(caps.maxImageExtent.height, extent.height));
         uint32_t imageCount = caps.maxImageCount ? std::min(caps.maxImageCount, std::max(caps.minImageCount + 1, 2u)) : std::max(caps.minImageCount + 1, 2u);
         m_minImageCount = caps.minImageCount;
-        m_imageCount = imageCount;
         VkSwapchainCreateInfoKHR sci{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
         sci.surface = surface;
         sci.minImageCount = imageCount;
@@ -734,6 +825,7 @@ VkSurfaceCapabilitiesKHR caps{};
         swapImages.resize(count);
         vkGetSwapchainImagesKHR(device, swapchain, &count, swapImages.data());
         swapViews.resize(count);
+        m_imageCount = count;
         for (size_t i = 0; i < count; ++i) {
             VkImageViewCreateInfo ivci{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
             ivci.image = swapImages[i];

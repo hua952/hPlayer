@@ -109,30 +109,7 @@ int  mainLogic:: onLoopFrame()
         if (procPacketFunRetType_exitAfterLoop & nRet) {
             break;
         }
-
-        while(pFrame) {
-            auto& rAsk = *pFrame;
-            constexpr double SYNC_TOLERANCE = 0.05;
-            double audio_time = mainClockSec();
-            double video_time = rAsk.m_pts_seconds;
-            double diff = video_time - audio_time;
-            if (diff > SYNC_TOLERANCE) {
-                break; /* 太快 */
-            }
-            if (diff > -SYNC_TOLERANCE) {
-                bool ok = m_render.presentNV12(rAsk);
-                if (!ok) {
-                    gError("present failed");
-                }
-                que.pop();
-                break; /* 正常播放一帧 */
-            }  
-            // popVideoFrame();
-            que.pop();
-            pFrame = que.front ();
-            // pFrame = frontVideoFrame();  /* 丢弃过时的帧  */
-            gInfo(" delete time out frame");
-        }
+        m_render.onLoopFrame();
     } while (0);
     return nRet;
 }

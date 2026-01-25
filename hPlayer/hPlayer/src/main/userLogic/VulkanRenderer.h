@@ -49,6 +49,7 @@ struct VulkanRenderResources {
         bool inFlight = false;
     };
     std::vector<Frame> frames;
+    udword  m_curFrameIndex = 0;
 };
 
 
@@ -65,8 +66,9 @@ public:
     void   init(SDL_Window* win);
     int  addDrawCallback (drawCallback* pI);
     void cleanup();
-    bool presentNV12(const videoFrameData& vf);
-
+    bool presentNV12(VulkanRenderResources::Frame* frame, const videoFrameData& vf);
+    int onLoopFrame();
+    bool onDraw(VulkanRenderResources::Frame* frame);
     bool  ycbcrFeatureEnabled ();
     void  setYcbcrFeatureEnabled (bool v);
 

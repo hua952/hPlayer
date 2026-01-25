@@ -127,11 +127,11 @@ void          VulkanRenderer:: setState(renderState st)
 
 bool  VulkanRenderer:: presentNV12(const videoFrameData& vf)
 {
-        if (VulkanRenderer::renderState_OK != state()) {
+        if (VulkanRenderer::renderState_OK != state()) [[unlikely]]{
             return true;
         }
-        if (device == VK_NULL_HANDLE) return false;
-        if (!vf.m_planNum || extent.width == 0 || extent.height == 0) return false;
+        if (device == VK_NULL_HANDLE) [[unlikely]]return false;
+        if (!vf.m_planNum || extent.width == 0 || extent.height == 0) [[unlikely]]return false;
 
         if (m_curVideoWidth != vf.m_width || m_curVideoHeight != vf.m_height) {
             m_curVideoWidth = vf.m_width;
@@ -142,7 +142,7 @@ bool  VulkanRenderer:: presentNV12(const videoFrameData& vf)
         for (auto& f : renderRes.frames) {
             if (!f.inFlight) { frame = &f; break; }
         }
-        if (!frame) return false;
+        if (!frame) [[unlikely]]return false;
         frame->inFlight = true;
 
         uint32_t yw = (uint32_t)vf.m_width;

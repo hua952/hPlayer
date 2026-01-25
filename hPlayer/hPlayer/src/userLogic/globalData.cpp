@@ -22,6 +22,13 @@ double mainClockSec ()
     return pLogic->audioClockSec ();
 }
 
+decodeRenderQueue&  getDecodeRenderQueue()
+{
+    static pSPSCQueue<videoFrameData> sVideoFrameQue(128);
+    return sVideoFrameQue;
+}
+
+/*
 static rigtorp::SPSCQueue<std::unique_ptr<videoFrameData>> sVideoFrameQue(128);
 
 videoFrameData*     frontVideoFrame()
@@ -53,8 +60,8 @@ bool tryEmplaceVideoFrame(videoFrameData&& data)
     );
 }
 
-/* 可能队列满了，非准确性判断 */
 bool mabeVideoFrameFull()
 {
     return (sVideoFrameQue.size() >= sVideoFrameQue.capacity());
 }
+*/

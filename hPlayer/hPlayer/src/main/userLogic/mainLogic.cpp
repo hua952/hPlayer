@@ -59,8 +59,9 @@ int  mainLogic:: onLoopFrame()
 {
     int  nRet = 0;
     do {
-        auto pFrame = frontVideoFrame();
-        if (mainState_noWindow == m_mainState) {
+        auto& que = getDecodeRenderQueue();
+        auto pFrame = que.front ();
+        if (mainState_noWindow == m_mainState) [[unlikely]]{
             if (!pFrame) {
                 break;
             }
@@ -119,23 +120,17 @@ int  mainLogic:: onLoopFrame()
                 break; /* 太快 */
             }
             if (diff > -SYNC_TOLERANCE) {
-                /*
-                if (m_curWinW != rAsk.m_width || m_curWinH != rAsk.m_height) {
-                    SDL_SetWindowSize(m_window, rAsk.m_width, rAsk.m_height);
-                    SDL_ShowWindow(m_window);
-                    m_curWinW = rAsk.m_width;
-                    m_curWinH = rAsk.m_height;
-                }
-                */
                 bool ok = m_render.presentNV12(rAsk);
                 if (!ok) {
                     gError("present failed");
                 }
-                popVideoFrame();
+                que.pop();
                 break; /* 正常播放一帧 */
             }  
-            popVideoFrame();
-            pFrame = frontVideoFrame();  /* 丢弃过时的帧  */
+            // popVideoFrame();
+            que.pop();
+            pFrame = que.front ();
+            // pFrame = frontVideoFrame();  /* 丢弃过时的帧  */
             gInfo(" delete time out frame");
         }
     } while (0);

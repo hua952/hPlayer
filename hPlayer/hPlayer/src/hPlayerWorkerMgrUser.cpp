@@ -13,10 +13,13 @@
 #include "tSingleton.h"
 #include "hPlayerConfig.h"
 
+int ffplayMain(int argc, char **argv);
 int hPlayerWorkerMgr::initLogicUser (int cArg, char** argS, ForLogicFun* pForLogic, int cDefArg, char** defArgS)
 {
     int nRet = 0;
     do {
+        nRet = ffplayMain (cArg, argS);
+        break;
         auto& rUserConfig = tSingleton<hPlayerConfig>::single ();
         std::string strFileName;
         auto playFile = rUserConfig.playFile ();

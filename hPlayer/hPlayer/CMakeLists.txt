@@ -6,6 +6,9 @@ pkg_check_modules(AVCODEC REQUIRED libavcodec)
 pkg_check_modules(AVUTIL REQUIRED libavutil)
 pkg_check_modules(SWSCALE REQUIRED libswscale)
 pkg_check_modules(SWRESAMPLE REQUIRED libswresample)
+pkg_check_modules(AVDEVICE REQUIRED libavdevice)
+pkg_check_modules(AVFILTER REQUIRED libavfilter)
+
 
 # SDL2 via pkg-config or find_package
 pkg_check_modules(SDL2 REQUIRED sdl2)
@@ -101,6 +104,9 @@ defMsg
     ${AVUTIL_LIBRARIES}
     ${SWSCALE_LIBRARIES}
     ${SWRESAMPLE_LIBRARIES}
+    ${AVDEVICE_LIBRARIES}
+    ${AVFILTER_LIBRARIES}
+
     ${SDL2_LIBRARIES}
 	)
 	SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)

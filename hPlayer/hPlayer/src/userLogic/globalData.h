@@ -4,6 +4,7 @@
 #include "comFun.h"
 #include <vector>
 #include "pSPSCQueue.h"
+#include "ffplayCom.h"
 
 struct  videoFrameData
 {
@@ -18,12 +19,5 @@ struct  videoFrameData
 };
 typedef pSPSCQueue<videoFrameData> decodeRenderQueue;
 decodeRenderQueue&  getDecodeRenderQueue();
-/*
-videoFrameData*   frontVideoFrame();
-void              popVideoFrame();
-bool tryPushVideoFrame(std::unique_ptr<videoFrameData>&&v);
-bool tryEmplaceVideoFrame(videoFrameData&& data);
-bool mabeVideoFrameFull();
-*/
 double mainClockSec ();
 #endif

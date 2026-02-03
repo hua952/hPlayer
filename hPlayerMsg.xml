@@ -21,5 +21,9 @@
                 <result dataType="udword"/>
             </ret>
         </PlayURL>
+        <mainInitOK>
+            <ask>
+            </ask>
+        </mainInitOK>
     </playerData>
 </rpc>

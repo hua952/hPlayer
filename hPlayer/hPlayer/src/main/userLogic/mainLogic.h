@@ -3,7 +3,9 @@
 #include <memory>
 #include "VulkanRenderer.h"
 #include "imGuiMgr.h"
+
 class main;
+struct VideoState;
 class mainLogic
 {
 public:
@@ -29,5 +31,6 @@ private:
     VulkanRenderer  m_render;
     imGuiMgr  m_imguiMgr{m_render};
     SDL_Window* m_window = nullptr;
+    // VideoState* m_is = nullptr;
 };
 #endif

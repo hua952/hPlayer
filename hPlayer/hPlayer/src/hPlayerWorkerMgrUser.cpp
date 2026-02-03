@@ -12,6 +12,7 @@
 #include <SDL.h>
 #include "tSingleton.h"
 #include "hPlayerConfig.h"
+#include "ffplayCom.h"
 
 int ffplayMain(int argc, char **argv);
 int hPlayerWorkerMgr::initLogicUser (int cArg, char** argS, ForLogicFun* pForLogic, int cDefArg, char** defArgS)
@@ -44,5 +45,6 @@ int hPlayerWorkerMgr::initLogicUser (int cArg, char** argS, ForLogicFun* pForLog
 
 void hPlayerWorkerMgr::onAppExit()
 {
+    do_exit (getVideoState());
     SDL_Quit();
 }

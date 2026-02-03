@@ -15,6 +15,7 @@
                     <procRpc>
                         <seekPos askType="ask"/>
                         <playURL askType="ask"/>
+                        <mainInitOK askType="ask"/>
                     </procRpc>
                 </decoTh>
             </server>

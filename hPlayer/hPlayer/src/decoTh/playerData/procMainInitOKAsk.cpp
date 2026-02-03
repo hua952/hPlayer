@@ -10,8 +10,9 @@
 #include "playerDataRpc.h"
 #include "readPackLogic.h"
 
-void  decoTh::procSeekPosAsk (const seekPosAsk& rAsk , seekPosRet& rRet)
+void  decoTh::procMainInitOKAsk ()
 {
     auto pLogic = (readPackLogic*)(userData());
-	gInfo("Rec procSeekPosAsk");
+    pLogic->setState(readPackLogic::readState_thisNeetInit);
+	gInfo("Rec procMainInitOKAsk");
 }

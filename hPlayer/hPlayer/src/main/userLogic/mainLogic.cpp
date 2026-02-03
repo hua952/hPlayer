@@ -10,6 +10,7 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_vulkan.h"
 #include "globalData.h"
+#include "ffplayCom.h"
 
 mainLogic:: mainLogic (main& rMain):m_rMain(rMain)
 {
@@ -33,6 +34,24 @@ int  mainLogic:: onLoopBegin()
 {
     int  nRet = 0;
     do {
+        auto is = getVideoState();
+        if (!is) [[unlikely]]{
+            nRet = procPacketFunRetType_exitAfterLoop;
+            break;
+        }
+        mainInitOKAskMsg msg;
+        m_rMain.sendMsg(msg);
+        /*
+        auto is = stream_open(input_filename, file_iformat);
+        if (!is) {
+            av_log(NULL, AV_LOG_FATAL, "Failed to initialize VideoState!\n");
+            nRet = procPacketFunRetType_exitAfterLoop;
+            // do_exit(NULL);
+            break;
+        }
+        m_is = is;
+        */
+        break;
         const char* filename = nullptr;
         
         m_render.addDrawCallback(&m_imguiMgr);
@@ -59,6 +78,9 @@ int  mainLogic:: onLoopFrame()
 {
     int  nRet = 0;
     do {
+        int ffplay_event_loop(VideoState *cur_stream);
+        nRet = ffplay_event_loop (getVideoState());
+        break;
         auto& que = getDecodeRenderQueue();
         auto pFrame = que.front ();
         if (mainState_noWindow == m_mainState) [[unlikely]]{
@@ -118,6 +140,7 @@ int  mainLogic:: onLoopEnd()
 {
     int  nRet = 0;
     do {
+        break;
         m_render.cleanup();
         //m_imguiMgr.cleanup();
         SDL_DestroyWindow(m_window);

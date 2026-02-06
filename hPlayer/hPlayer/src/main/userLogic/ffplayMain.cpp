@@ -2,6 +2,9 @@
 #include "ffplayMain.h"
 #include "strFun.h"
 #include "loop.h"
+#include "mainLogic.h"
+#include "playerDataRpc.h"
+#include "main.h"
 
 static int cursor_hidden = 0;
 static int64_t cursor_last_shown;
@@ -755,11 +758,12 @@ static int64_t frame_queue_last_pos(FrameQueue *f)
 }
 
 /* handle an event sent by the GUI */
-int ffplay_event_loop(VideoState *cur_stream)
+int ffplay_event_loop(VideoState *cur_stream, mainLogic& rMain)
 {
     SDL_Event event;
     double incr, pos, frac;
     int nRet = 0;
+    bool bClose = false;
     do {
     // for (;;) {
         double x;
@@ -768,7 +772,8 @@ int ffplay_event_loop(VideoState *cur_stream)
         case SDL_KEYDOWN:
             if (exit_on_keydown || event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_q) {
                 // do_exit(cur_stream);
-                nRet = procPacketFunRetType_exitAfterLoop;
+                // nRet = procPacketFunRetType_exitAfterLoop;
+                bClose = true;
                 break;
             }
             // If we don't yet have a window, skip all key events, because read_thread might still be initializing...
@@ -878,7 +883,8 @@ int ffplay_event_loop(VideoState *cur_stream)
         case SDL_MOUSEBUTTONDOWN:
             if (exit_on_mousedown) {
                 // do_exit(cur_stream);
-                nRet = procPacketFunRetType_exitAfterLoop;
+                // nRet = procPacketFunRetType_exitAfterLoop;
+                bClose = true;
                 break;
             }
             if (event.button.button == SDL_BUTTON_LEFT) {
@@ -949,13 +955,18 @@ int ffplay_event_loop(VideoState *cur_stream)
         case SDL_QUIT:
         case FF_QUIT_EVENT:
             // do_exit(cur_stream);
-            nRet = procPacketFunRetType_exitAfterLoop;
+            //nRet = procPacketFunRetType_exitAfterLoop;
+            bClose = true;
             break;
         default:
             break;
         }
     //}
     } while (0);
+    if (bClose) {
+        readPackExitNtfAskMsg msg;
+        rMain.getMain().sendMsg(msg);
+    }
     return nRet;
 }
 

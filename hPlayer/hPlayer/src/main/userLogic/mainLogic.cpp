@@ -20,6 +20,11 @@ mainLogic:: ~mainLogic ()
 {
 }
 
+main&   mainLogic:: getMain()
+{
+    return m_rMain;
+}
+
 VulkanRenderer&  mainLogic:: render ()
 {
     return m_render;
@@ -74,15 +79,31 @@ int  mainLogic:: onLoopBegin()
     return nRet;
 }
 
+mainLogic::mainState  mainLogic:: state()
+{
+    return m_mainState ;
+}
+
+void   mainLogic:: setState(mainState st)
+{
+    m_mainState = st;
+}
+
 int  mainLogic:: onLoopFrame()
 {
     int  nRet = 0;
     do {
-        int ffplay_event_loop(VideoState *cur_stream);
-        nRet = ffplay_event_loop (getVideoState());
+        if (mainState_willExit== m_mainState) [[unlikely]]{
+            nRet = procPacketFunRetType_exitAfterLoop;
+            break;
+        }
+        int ffplay_event_loop(VideoState *cur_stream, mainLogic& rMain);
+        nRet = ffplay_event_loop (getVideoState(), *this);
         break;
         auto& que = getDecodeRenderQueue();
         auto pFrame = que.front ();
+        
+
         if (mainState_noWindow == m_mainState) [[unlikely]]{
             if (!pFrame) {
                 break;

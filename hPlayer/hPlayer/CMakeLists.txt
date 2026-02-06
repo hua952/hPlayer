@@ -18,7 +18,11 @@ set(IMGUI_DIR $ENV{IMGUI_HOME})
 
 set(serSrcS)
 set(genSrcS)
-file(GLOB genSrcS src/userLogic/*.cpp src/*.cpp src/main/*.cpp src/main/playerData/*.cpp src/main/userLogic/*.cpp src/decoTh/*.cpp src/decoTh/playerData/*.cpp src/decoTh/userLogic/*.cpp )
+file(GLOB genSrcS src/userLogic/*.cpp src/*.cpp src/main/*.cpp src/main/playerData/*.cpp src/main/userLogic/*.cpp src/decoTh/*.cpp src/decoTh/playerData/*.cpp src/decoTh/userLogic/*.cpp 
+src/audioDec/*.cpp src/audioDec/playerData/*.cpp src/audioDec/userLogic/*.cpp
+src/videoDec/*.cpp src/videoDec/playerData/*.cpp src/videoDec/userLogic/*.cpp
+src/subtitleqDec/*.cpp src/subtitleqDec/playerData/*.cpp src/subtitleqDec/userLogic/*.cpp
+)
 set(defS)
 set(libPath)
 set(libDep)
@@ -46,6 +50,16 @@ src/main/userLogic
 ${CMAKE_SOURCE_DIR}/gen/hPlayer/src/decoTh
 src/decoTh
 src/decoTh/userLogic
+
+${CMAKE_SOURCE_DIR}/gen/hPlayer/src/audioDec
+src/audioDec
+src/audioDec/userLogic
+${CMAKE_SOURCE_DIR}/gen/hPlayer/src/videoDec
+src/videoDec
+src/videoDec/userLogic
+${CMAKE_SOURCE_DIR}/gen/hPlayer/src/subtitleqDec
+src/subtitleqDec
+src/subtitleqDec/userLogic
 )
 list(APPEND libPath set(libDir ${firstBuildDir}/lib ${appFrameDir}/lib))
 link_directories(${libPath} ${libDep})

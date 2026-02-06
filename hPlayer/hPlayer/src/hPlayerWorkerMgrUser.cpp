@@ -46,5 +46,5 @@ int hPlayerWorkerMgr::initLogicUser (int cArg, char** argS, ForLogicFun* pForLog
 void hPlayerWorkerMgr::onAppExit()
 {
     do_exit (getVideoState());
-    SDL_Quit();
+    // SDL_Quit();
 }

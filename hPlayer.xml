@@ -9,6 +9,7 @@
                     <procRpc>
                         <seekPos askType="ret"/>
                         <playURL askType="ret"/>
+                        <readPackExitOKNtf askType="ask"/>
                     </procRpc>
                 </main>
                 <decoTh>
@@ -16,8 +17,26 @@
                         <seekPos askType="ask"/>
                         <playURL askType="ask"/>
                         <mainInitOK askType="ask"/>
+                        <readPackExitNtf askType="ask"/>
+                        <videoDecExitOKNtf askType="ask"/>
                     </procRpc>
                 </decoTh>
+                <videoDec>
+                    <procRpc>
+                        <initvideoDec askType="ask"/>
+                        <videoDecExitNtf askType="ask"/>
+                    </procRpc>
+                </videoDec>
+                <audioDec>
+                    <procRpc>
+                        <initAudio askType="ask"/>
+                    </procRpc>
+                </audioDec>
+                <subtitleqDec>
+                    <procRpc>
+                        <subtitleq askType="ask"/>
+                    </procRpc>
+                </subtitleqDec>
             </server>
         </hPlayer>
     </app>

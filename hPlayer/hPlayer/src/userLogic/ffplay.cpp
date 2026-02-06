@@ -58,9 +58,9 @@ int show_status = -1;
 static int av_sync_type = AV_SYNC_AUDIO_MASTER;
 int64_t start_time = AV_NOPTS_VALUE;
 int64_t duration = AV_NOPTS_VALUE;
-static int fast = 0;
+int fast = 0;
 int genpts = 0;
-static int lowres = 0;
+int lowres = 0;
 static int decoder_reorder_pts = -1;
 int autoexit;
 int exit_on_keydown;
@@ -70,16 +70,16 @@ int framedrop = -1;
 int infinite_buffer = -1;
 // static enum ShowMode show_mode = SHOW_MODE_NONE;
 VideoState::ShowMode show_mode = VideoState::SHOW_MODE_NONE;
-static const char *audio_codec_name;
-static const char *subtitle_codec_name;
-static const char *video_codec_name;
+const char *audio_codec_name;
+const char *subtitle_codec_name;
+const char *video_codec_name;
 double rdftspeed = 0.02;
-static const char **vfilters_list = NULL;
+const char **vfilters_list = NULL;
 int nb_vfilters = 0;
-static char *afilters = NULL;
+char *afilters = NULL;
 static int autorotate = 1;
 int find_stream_info = 1;
-static int filter_nbthreads = 0;
+int filter_nbthreads = 0;
 static int enable_vulkan = 0;
 static char *vulkan_params = NULL;
 static const char *hwaccel = NULL;
@@ -92,7 +92,7 @@ int64_t audio_callback_time;
 SDL_Window *window;
 SDL_Renderer *renderer;
 static SDL_RendererInfo renderer_info = {0};
-static SDL_AudioDeviceID audio_dev;
+SDL_AudioDeviceID audio_dev;
 
 VkRenderer *vk_renderer;
 
@@ -218,7 +218,7 @@ static void packet_queue_abort(PacketQueue *q)
     SDL_UnlockMutex(q->mutex);
 }
 
-static void packet_queue_start(PacketQueue *q)
+void packet_queue_start(PacketQueue *q)
 {
     SDL_LockMutex(q->mutex);
     q->abort_request = 0;
@@ -261,7 +261,7 @@ static int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block, int *seria
     return ret;
 }
 
-static int decoder_init(Decoder *d, AVCodecContext *avctx, PacketQueue *queue, SDL_cond *empty_queue_cond) {
+int decoder_init(Decoder *d, AVCodecContext *avctx, PacketQueue *queue, SDL_cond *empty_queue_cond) {
     memset(d, 0, sizeof(Decoder));
     d->pkt = av_packet_alloc();
     if (!d->pkt)
@@ -698,7 +698,7 @@ void do_exit(VideoState *is)
         printf("\n");
     SDL_Quit();
     av_log(NULL, AV_LOG_QUIET, "%s", "");
-    exit(0);
+    // exit(0);
 }
 
 static void sigterm_handler(int sig)
@@ -840,12 +840,7 @@ void step_to_next_frame(VideoState *is)
     is->step = 1;
 }
 
-
-
-
-
-
-static int queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial)
+int queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial)
 {
     Frame *vp;
 
@@ -876,7 +871,7 @@ static int queue_picture(VideoState *is, AVFrame *src_frame, double pts, double 
     return 0;
 }
 
-static int get_video_frame(VideoState *is, AVFrame *frame)
+int get_video_frame(VideoState *is, AVFrame *frame)
 {
     int got_picture;
 
@@ -952,7 +947,7 @@ fail:
     return ret;
 }
 
-static int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame)
+int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame)
 {
     enum AVPixelFormat pix_fmts[FF_ARRAY_ELEMS(sdl_texture_format_map)];
     char sws_flags_str[512] = "";
@@ -1098,7 +1093,7 @@ fail:
     return ret;
 }
 
-static int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format)
+int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format)
 {
     AVFilterContext *filt_asrc = NULL, *filt_asink = NULL;
     char aresample_swr_opts[512] = "";
@@ -1170,7 +1165,7 @@ end:
     return ret;
 }
 
-static int audio_thread(void *arg)
+int audio_thread(void *arg)
 {
     VideoState *is = (VideoState *)arg;
     AVFrame *frame = av_frame_alloc();
@@ -1251,7 +1246,7 @@ static int audio_thread(void *arg)
     return ret;
 }
 
-static int decoder_start(Decoder *d, int (*fn)(void *), const char *thread_name, void* arg)
+int decoder_start(Decoder *d, int (*fn)(void *), const char *thread_name, void* arg)
 {
     packet_queue_start(d->queue);
     d->decoder_tid = SDL_CreateThread(fn, thread_name, arg);
@@ -1367,7 +1362,7 @@ static int video_thread(void *arg)
     return 0;
 }
 
-static int subtitle_thread(void *arg)
+int subtitle_thread(void *arg)
 {
     VideoState *is = (VideoState *) arg;
     Frame *sp;
@@ -1623,7 +1618,7 @@ static void sdl_audio_callback(void *opaque, Uint8 *stream, int len)
     }
 }
 
-static int audio_open(void *opaque, AVChannelLayout *wanted_channel_layout, int wanted_sample_rate, struct AudioParams *audio_hw_params)
+int audio_open(void *opaque, AVChannelLayout *wanted_channel_layout, int wanted_sample_rate, struct AudioParams *audio_hw_params)
 {
     SDL_AudioSpec wanted_spec, spec;
     const char *env;
@@ -1699,7 +1694,7 @@ static int audio_open(void *opaque, AVChannelLayout *wanted_channel_layout, int 
     return spec.size;
 }
 
-static int create_hwaccel(AVBufferRef **device_ctx)
+int create_hwaccel(AVBufferRef **device_ctx)
 {
     enum AVHWDeviceType type;
     int ret;

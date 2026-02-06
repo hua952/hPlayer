@@ -11,7 +11,10 @@ public:
     {
         readState_mainNotInit,
         readState_thisNeetInit,
-        readState_ok
+        readState_ok,
+        readState_playEnd,
+        readState_waiteSubExit,
+        readState_willExit,
     };
     readPackLogic (decoTh& rDecoTh);
     ~readPackLogic ();
@@ -20,9 +23,12 @@ public:
     int onLoopBegin();
     int onLoopFrame();
     int onLoopEnd();
-
+    
+    void sendExitNtfToSub();
     readState  state ();
     void  setState(readState  st);
+    decoTh&    getDecoTh();
+    void       clean();
 private:
     decoTh&    m_rDecoTh;
 

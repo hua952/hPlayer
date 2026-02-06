@@ -6,13 +6,12 @@
 #include "loopHandleS.h"
 #include "logicWorker.h"
 #include "hPlayerWorkerMgr.h"
-
-#include "playerDataRpc.h"
 #include "readPackLogic.h"
+#include "playerDataRpc.h"
 
-void  decoTh::procSeekPosAsk (const seekPosAsk& rAsk , seekPosRet& rRet)
+void  decoTh::procReadPackExitNtfAsk ()
 {
     auto pLogic = (readPackLogic*)(userData());
-    pLogic->setState(readPackLogic::readState_thisNeetInit);
-	gInfo("Rec procSeekPosAsk");
+    pLogic->sendExitNtfToSub();
+	gInfo("Rec procReadPackExitNtfAsk");
 }

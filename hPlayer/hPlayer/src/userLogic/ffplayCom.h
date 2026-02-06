@@ -324,6 +324,16 @@ extern int64_t duration;
 extern int infinite_buffer;
 extern int loop;
 extern int autoexit;
+extern int lowres;
+extern const char *audio_codec_name;
+extern const char *subtitle_codec_name;
+extern const char *video_codec_name;
+extern int fast;
+extern char *afilters;
+extern SDL_AudioDeviceID audio_dev;
+extern int filter_nbthreads;
+extern const char **vfilters_list;
+
 
 void stream_toggle_pause(VideoState *is);
 int realloc_texture(SDL_Texture **texture, Uint32 new_format, int new_width, int new_height, SDL_BlendMode blendmode, int init_texture);
@@ -352,4 +362,15 @@ VideoState *stream_open(const char *filename,
                                const AVInputFormat *iformat);
 void set_default_window_size(int width, int height, AVRational sar);
 void packet_queue_flush(PacketQueue *q);
+void packet_queue_start(PacketQueue *q);
+int create_hwaccel(AVBufferRef **device_ctx);
+int audio_open(void *opaque, AVChannelLayout *wanted_channel_layout, int wanted_sample_rate, struct AudioParams *audio_hw_params);
+int decoder_init(Decoder *d, AVCodecContext *avctx, PacketQueue *queue, SDL_cond *empty_queue_cond);
+int audio_thread(void *arg);
+int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format);
+int decoder_start(Decoder *d, int (*fn)(void *), const char *thread_name, void* arg);
+int subtitle_thread(void *arg);
+int get_video_frame(VideoState *is, AVFrame *frame);
+int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame);
+int queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial);
 #endif

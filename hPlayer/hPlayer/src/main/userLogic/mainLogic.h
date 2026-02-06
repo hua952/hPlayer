@@ -13,6 +13,7 @@ public:
     {
         mainState_noWindow,
         mainState_haveWindow,
+        mainState_willExit,
     };
     mainLogic (main& rMain);
     ~mainLogic ();
@@ -25,6 +26,9 @@ public:
 
     // int m_curWinW = 680;
     // int m_curWinH = 680;
+    mainState state();
+    void  setState(mainState st);
+    main&  getMain();
 private:
     mainState   m_mainState = mainState_noWindow;
     main&            m_rMain;

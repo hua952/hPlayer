@@ -19,6 +19,7 @@
                         <mainInitOK askType="ask"/>
                         <readPackExitNtf askType="ask"/>
                         <videoDecExitOKNtf askType="ask"/>
+                        <audioDecExitOKNtf askType="ask"/>
                     </procRpc>
                 </decoTh>
                 <videoDec>
@@ -30,6 +31,7 @@
                 <audioDec>
                     <procRpc>
                         <initAudio askType="ask"/>
+                        <audioDecExitNtf askType="ask"/>
                     </procRpc>
                 </audioDec>
                 <subtitleqDec>

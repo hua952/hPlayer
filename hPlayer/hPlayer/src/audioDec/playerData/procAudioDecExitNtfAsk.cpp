@@ -10,9 +10,12 @@
 #include "playerDataRpc.h"
 #include "audioLogic.h"
 
-void  audioDec::procInitAudioAsk ()
+void  audioDec::procAudioDecExitNtfAsk ()
 {
     auto pLogic = (audioLogic*)(userData());
-    pLogic->setState(audioLogic::audioLogicState_thisNeetInit);
-	gInfo("Rec procInitAudioAsk");
+    pLogic->clean();
+    pLogic->setState(audioLogic::audioLogicState_willExit);
+    audioDecExitOKNtfAskMsg ask;
+    pLogic->getAudioDec().sendMsg(ask);
+	gInfo("Rec procAudioDecExitNtfAsk");
 }

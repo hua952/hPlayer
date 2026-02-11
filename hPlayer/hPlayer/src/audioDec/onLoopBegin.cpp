@@ -1,10 +1,10 @@
 #include "audioDec.h"
+#include "audioLogic.h"
 
 int audioDec::onLoopBegin()
 {
-	int nRet = 0;
-	do {
-	} while (0);
-	return nRet;
+    static audioLogic sDecoder(*this);
+    setUserData (&sDecoder);
+    return sDecoder.onLoopBegin();
 }
 

@@ -1,10 +1,9 @@
 #include "audioDec.h"
+#include "audioLogic.h"
 
 int audioDec::onLoopFrame()
 {
-	int nRet = 0;
-	do {
-	} while (0);
-	return nRet;
+    auto pLogic = (audioLogic*)(userData());
+    return pLogic->onLoopFrame();
 }
 

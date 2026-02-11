@@ -43,3 +43,4 @@ private:
     videoDecLogicState  m_state{videoDecLogicState_readNotInit};
 };
 #endif
+

@@ -138,11 +138,9 @@ int video_stream_component_open(VideoState *is, int stream_index,  readPackLogic
 
     codec = avcodec_find_decoder(avctx->codec_id);
 
-    switch(avctx->codec_type){
-        case AVMEDIA_TYPE_AUDIO   : is->last_audio_stream    = stream_index; forced_codec_name =    audio_codec_name; break;
-        case AVMEDIA_TYPE_SUBTITLE: is->last_subtitle_stream = stream_index; forced_codec_name = subtitle_codec_name; break;
-        case AVMEDIA_TYPE_VIDEO   : is->last_video_stream    = stream_index; forced_codec_name =    video_codec_name; break;
-    }
+    is->last_video_stream    = stream_index;
+    forced_codec_name =    video_codec_name;
+    
     if (forced_codec_name)
         codec = avcodec_find_decoder_by_name(forced_codec_name);
     if (!codec) {
@@ -192,80 +190,160 @@ int video_stream_component_open(VideoState *is, int stream_index,  readPackLogic
 
     is->eof = 0;
     ic->streams[stream_index]->discard = AVDISCARD_DEFAULT;
-    switch (avctx->codec_type) {
-    case AVMEDIA_TYPE_AUDIO:
-        {
-            AVFilterContext *sink;
+    
+    is->video_stream = stream_index;
+    is->video_st = ic->streams[stream_index];
 
-            is->audio_filter_src.freq           = avctx->sample_rate;
-            ret = av_channel_layout_copy(&is->audio_filter_src.ch_layout, &avctx->ch_layout);
-            if (ret < 0)
-                goto fail;
-            is->audio_filter_src.fmt            = avctx->sample_fmt;
-            if ((ret = configure_audio_filters(is, afilters, 0)) < 0)
-                goto fail;
-            sink = is->out_audio_filter;
-            sample_rate    = av_buffersink_get_sample_rate(sink);
-            ret = av_buffersink_get_ch_layout(sink, &ch_layout);
-            if (ret < 0)
-                goto fail;
-        }
-
-        /* prepare audio output */
-        if ((ret = audio_open(is, &ch_layout, sample_rate, &is->audio_tgt)) < 0)
+    if ((ret = decoder_init(&is->viddec, avctx, &is->videoq, is->continue_read_thread)) < 0) {
             goto fail;
-        is->audio_hw_buf_size = ret;
-        is->audio_src = is->audio_tgt;
-        is->audio_buf_size  = 0;
-        is->audio_buf_index = 0;
-
-        /* init averaging filter */
-        is->audio_diff_avg_coef  = exp(log(0.01) / AUDIO_DIFF_AVG_NB);
-        is->audio_diff_avg_count = 0;
-        /* since we do not have a precise anough audio FIFO fullness,
-           we correct audio sync only if larger than this threshold */
-        is->audio_diff_threshold = (double)(is->audio_hw_buf_size) / is->audio_tgt.bytes_per_sec;
-
-        is->audio_stream = stream_index;
-        is->audio_st = ic->streams[stream_index];
-
-        if ((ret = decoder_init(&is->auddec, avctx, &is->audioq, is->continue_read_thread)) < 0)
-            goto fail;
-        if (is->ic->iformat->flags & AVFMT_NOTIMESTAMPS) {
-            is->auddec.start_pts = is->audio_st->start_time;
-            is->auddec.start_pts_tb = is->audio_st->time_base;
-        }
-        if ((ret = decoder_start(&is->auddec, audio_thread, "audio_decoder", is)) < 0)
-            goto out;
-        SDL_PauseAudioDevice(audio_dev, 0);
-        break;
-    case AVMEDIA_TYPE_VIDEO:
-        is->video_stream = stream_index;
-        is->video_st = ic->streams[stream_index];
-
-        if ((ret = decoder_init(&is->viddec, avctx, &is->videoq, is->continue_read_thread)) < 0)
-            goto fail;
-            packet_queue_start(is->viddec.queue);
-            {
-                initvideoDecAskMsg msg;
-                pThis->getDecoTh().sendMsg(msg);
-            }
-            // if ((ret = video_decoder_start(&is->viddec, video_thread, "video_decoder", this)) < 0)
-                // goto out;
-            is->queue_attachments_req = 1;
-        break;
-    case AVMEDIA_TYPE_SUBTITLE:
-        is->subtitle_stream = stream_index;
-        is->subtitle_st = ic->streams[stream_index];
-
-        if ((ret = decoder_init(&is->subdec, avctx, &is->subtitleq, is->continue_read_thread)) < 0)
-            goto fail;
-        if ((ret = decoder_start(&is->subdec, subtitle_thread, "subtitle_decoder", is)) < 0)
-            goto out;
-        break;
-    default:
-        break;
     }
+    packet_queue_start(is->viddec.queue);
+    {
+        initvideoDecAskMsg msg;
+        pThis->getDecoTh().sendMsg(msg);
+    }
+    // if ((ret = video_decoder_start(&is->viddec, video_thread, "video_decoder", this)) < 0)
+    // goto out;
+    is->queue_attachments_req = 1;
+    goto out;
+fail:
+    avcodec_free_context(&avctx);
+out:
+    av_channel_layout_uninit(&ch_layout);
+    av_dict_free(&opts);
+    return ret;
+}
+
+int audio_stream_component_open(VideoState *is, int stream_index,  readPackLogic* pThis)
+{
+    AVFormatContext *ic = is->ic;
+    AVCodecContext *avctx;
+    const AVCodec *codec;
+    const char *forced_codec_name = NULL;
+    AVDictionary *opts = NULL;
+    int sample_rate;
+    AVChannelLayout ch_layout = { 0 };
+    int ret = 0;
+    int stream_lowres = lowres;
+
+    if (stream_index < 0 || stream_index >= ic->nb_streams)
+        return -1;
+
+    avctx = avcodec_alloc_context3(NULL);
+    if (!avctx)
+        return AVERROR(ENOMEM);
+
+    ret = avcodec_parameters_to_context(avctx, ic->streams[stream_index]->codecpar);
+    if (ret < 0)
+        goto fail;
+    avctx->pkt_timebase = ic->streams[stream_index]->time_base;
+
+    codec = avcodec_find_decoder(avctx->codec_id);
+
+    is->last_audio_stream    = stream_index;
+    forced_codec_name =    audio_codec_name;
+
+    if (forced_codec_name)
+        codec = avcodec_find_decoder_by_name(forced_codec_name);
+    if (!codec) {
+        if (forced_codec_name) av_log(NULL, AV_LOG_WARNING,
+                                      "No codec could be found with name '%s'\n", forced_codec_name);
+        else                   av_log(NULL, AV_LOG_WARNING,
+                                      "No decoder could be found for codec %s\n", avcodec_get_name(avctx->codec_id));
+        ret = AVERROR(EINVAL);
+        goto fail;
+    }
+
+    avctx->codec_id = codec->id;
+    if (stream_lowres > codec->max_lowres) {
+        av_log(avctx, AV_LOG_WARNING, "The maximum value for lowres supported by the decoder is %d\n",
+                codec->max_lowres);
+        stream_lowres = codec->max_lowres;
+    }
+    avctx->lowres = stream_lowres;
+
+    if (fast)
+        avctx->flags2 |= AV_CODEC_FLAG2_FAST;
+
+    ret = filter_codec_opts(codec_opts, avctx->codec_id, ic,
+                            ic->streams[stream_index], codec, &opts, NULL);
+    if (ret < 0)
+        goto fail;
+
+    if (!av_dict_get(opts, "threads", NULL, 0))
+        av_dict_set(&opts, "threads", "auto", 0);
+    if (stream_lowres)
+        av_dict_set_int(&opts, "lowres", stream_lowres, 0);
+
+    av_dict_set(&opts, "flags", "+copy_opaque", AV_DICT_MULTIKEY);
+
+    if (avctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+        ret = create_hwaccel(&avctx->hw_device_ctx);
+        if (ret < 0)
+            goto fail;
+    }
+
+    if ((ret = avcodec_open2(avctx, codec, &opts)) < 0) {
+        goto fail;
+    }
+    ret = check_avoptions(opts);
+    if (ret < 0)
+        goto fail;
+
+    is->eof = 0;
+    ic->streams[stream_index]->discard = AVDISCARD_DEFAULT;
+    {
+        AVFilterContext *sink;
+
+        is->audio_filter_src.freq           = avctx->sample_rate;
+        ret = av_channel_layout_copy(&is->audio_filter_src.ch_layout, &avctx->ch_layout);
+        if (ret < 0)
+            goto fail;
+        is->audio_filter_src.fmt            = avctx->sample_fmt;
+        if ((ret = configure_audio_filters(is, afilters, 0)) < 0)
+            goto fail;
+        sink = is->out_audio_filter;
+        sample_rate    = av_buffersink_get_sample_rate(sink);
+        ret = av_buffersink_get_ch_layout(sink, &ch_layout);
+        if (ret < 0)
+            goto fail;
+    }
+
+    /* prepare audio output */
+    if ((ret = audio_open(is, &ch_layout, sample_rate, &is->audio_tgt)) < 0)
+        goto fail;
+    is->audio_hw_buf_size = ret;
+    is->audio_src = is->audio_tgt;
+    is->audio_buf_size  = 0;
+    is->audio_buf_index = 0;
+
+    /* init averaging filter */
+    is->audio_diff_avg_coef  = exp(log(0.01) / AUDIO_DIFF_AVG_NB);
+    is->audio_diff_avg_count = 0;
+    /* since we do not have a precise anough audio FIFO fullness,
+       we correct audio sync only if larger than this threshold */
+    is->audio_diff_threshold = (double)(is->audio_hw_buf_size) / is->audio_tgt.bytes_per_sec;
+
+    is->audio_stream = stream_index;
+    is->audio_st = ic->streams[stream_index];
+
+    if ((ret = decoder_init(&is->auddec, avctx, &is->audioq, is->continue_read_thread)) < 0)
+        goto fail;
+    if (is->ic->iformat->flags & AVFMT_NOTIMESTAMPS) {
+        is->auddec.start_pts = is->audio_st->start_time;
+        is->auddec.start_pts_tb = is->audio_st->time_base;
+    }
+    /*
+    if ((ret = decoder_start(&is->auddec, audio_thread, "audio_decoder", is)) < 0)
+        goto out;
+        */
+
+    packet_queue_start(is->auddec.queue);
+    {
+        initAudioAskMsg msg;
+        pThis->getDecoTh().sendMsg(msg);
+    }
+    SDL_PauseAudioDevice(audio_dev, 0);
     goto out;
 
 fail:
@@ -273,11 +351,8 @@ fail:
 out:
     av_channel_layout_uninit(&ch_layout);
     av_dict_free(&opts);
-
     return ret;
 }
-
-
 
 /* this thread gets the stream from the disk or the network */
 static int read_thread(void *arg)
@@ -465,11 +540,13 @@ int  readPackLogic:: initThis()
 
         /* open the streams */
         if (st_index[AVMEDIA_TYPE_AUDIO] >= 0) {
-            stream_component_open(is, st_index[AVMEDIA_TYPE_AUDIO]);
+            setVideoHaveClean (false);
+            audio_stream_component_open(is, st_index[AVMEDIA_TYPE_AUDIO], this);
         }
 
         ret = -1;
         if (st_index[AVMEDIA_TYPE_VIDEO] >= 0) {
+            setAudioHaveClean (false);
             ret = video_stream_component_open(is, st_index[AVMEDIA_TYPE_VIDEO], this);
         }
         if (is->show_mode == VideoState::SHOW_MODE_NONE)
@@ -494,6 +571,50 @@ int  readPackLogic:: initThis()
     return nRet;
 }
 
+bool  readPackLogic:: subTitleDecHaveClean ()
+{
+    return m_subTitleDecHaveClean;
+}
+
+void  readPackLogic:: setSubTitleDecHaveClean (bool v)
+{
+    m_subTitleDecHaveClean = v;
+}
+
+bool  readPackLogic:: audioHaveClean ()
+{
+    return m_audioHaveClean;
+}
+
+void  readPackLogic:: setAudioHaveClean (bool v)
+{
+    m_audioHaveClean = v;
+}
+
+bool  readPackLogic:: videoHaveClean ()
+{
+    return m_videoHaveClean;
+}
+
+void  readPackLogic:: setVideoHaveClean (bool v)
+{
+    m_videoHaveClean = v;
+}
+
+
+void  readPackLogic:: tryClean()
+{
+    do {
+        if (audioHaveClean() && videoHaveClean() && subTitleDecHaveClean()) {
+            clean();
+            setState (readPackLogic::readState_willExit);
+            readPackExitOKNtfAskMsg  msg;
+            auto& th = getDecoTh ();
+            th.sendMsg(msg);
+        }
+    } while (0);
+}
+
 void  readPackLogic:: sendExitNtfToSub()
 {
     do {
@@ -502,6 +623,20 @@ void  readPackLogic:: sendExitNtfToSub()
         rTh.sendMsg(msg);
         setState (readState_waiteSubExit);
     } while (0);
+}
+
+void   readPackLogic:: sendEmptyAudioPack()
+{
+    auto pkt = av_packet_alloc();
+    VideoState *is = getVideoState();
+    packet_queue_put_nullpacket(&is->audioq, pkt, is->audio_stream);
+}
+
+void   readPackLogic:: sendEmptyVideoPack()
+{
+    auto pkt = av_packet_alloc();
+    VideoState *is = getVideoState();
+    packet_queue_put_nullpacket(&is->videoq, pkt, is->video_stream);
 }
 
 int  readPackLogic:: onLoopFrame()

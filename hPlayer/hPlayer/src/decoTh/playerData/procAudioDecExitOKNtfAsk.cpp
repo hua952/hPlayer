@@ -9,26 +9,13 @@
 #include "readPackLogic.h"
 #include "playerDataRpc.h"
 
-static bool sendEmptyPack(void* pU)
-{
-    auto pLogic = (readPackLogic*)(pU);
-    pLogic->sendEmptyAudioPack();
-    return false;
-}
-void  decoTh::procVideoDecExitOKNtfAsk ()
+void  decoTh::procAudioDecExitOKNtfAsk ()
 {
     auto pLogic = (readPackLogic*)(userData());
-    pLogic->setVideoHaveClean (true);
-    auto& th = pLogic->getDecoTh ();
-    audioDecExitNtfAskMsg ask;
-    th.sendMsg(ask);
-    th.addTimer(50, sendEmptyPack, pLogic);
-    /*
     pLogic->clean();
     readPackExitOKNtfAskMsg  msg;
     auto& th = pLogic->getDecoTh ();
     th.sendMsg(msg);
     pLogic->setState (readPackLogic::readState_willExit);
-    */
-	gInfo("Rec procVideoDecExitOKNtfAsk");
+	gInfo("Rec procAudioDecExitOKNtfAsk");
 }

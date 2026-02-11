@@ -5,6 +5,7 @@ hPlayerInstall/#
 build/#
 bin/#
 .cache/#
+gen/#
 compile_commands.json
 CMakeFiles/
 *.vcxproj

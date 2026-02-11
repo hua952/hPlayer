@@ -25,11 +25,23 @@ public:
     int onLoopEnd();
     
     void sendExitNtfToSub();
+    void tryClean();
     readState  state ();
     void  setState(readState  st);
     decoTh&    getDecoTh();
     void       clean();
+    bool  videoHaveClean ();
+    void  setVideoHaveClean (bool v);
+    bool  audioHaveClean ();
+    void  setAudioHaveClean (bool v);
+    bool  subTitleDecHaveClean ();
+    void  setSubTitleDecHaveClean (bool v);
+    void  sendEmptyAudioPack();
+    void  sendEmptyVideoPack();
 private:
+    bool  m_subTitleDecHaveClean = true;
+    bool  m_audioHaveClean = true;
+    bool  m_videoHaveClean = true;
     decoTh&    m_rDecoTh;
 
     AVFormatContext* m_ic = nullptr;

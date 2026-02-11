@@ -373,4 +373,8 @@ int subtitle_thread(void *arg);
 int get_video_frame(VideoState *is, AVFrame *frame);
 int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame);
 int queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial);
+
+void frame_queue_push(FrameQueue *f);
+Frame *frame_queue_peek_writable(FrameQueue *f);
+int decoder_decode_frame(Decoder *d, AVFrame *frame, AVSubtitle *sub);
 #endif

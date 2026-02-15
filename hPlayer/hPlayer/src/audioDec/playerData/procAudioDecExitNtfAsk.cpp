@@ -8,14 +8,14 @@
 #include "hPlayerWorkerMgr.h"
 
 #include "playerDataRpc.h"
-#include "audioLogic.h"
+#include "audioDecUserLogic.h"
 
 void  audioDec::procAudioDecExitNtfAsk ()
 {
-    auto pLogic = (audioLogic*)(userData());
+	auto pLogic = dynamic_cast<audioDecUserLogic*>(getIUserLogicWorker ());
     pLogic->clean();
-    pLogic->setState(audioLogic::audioLogicState_willExit);
+    pLogic->setState(audioDecUserLogic::audioLogicState_willExit);
     audioDecExitOKNtfAskMsg ask;
-    pLogic->getAudioDec().sendMsg(ask);
+    pLogic->getServer().sendMsg(ask);
 	gInfo("Rec procAudioDecExitNtfAsk");
 }

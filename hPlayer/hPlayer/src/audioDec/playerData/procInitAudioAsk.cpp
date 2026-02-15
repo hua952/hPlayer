@@ -8,11 +8,11 @@
 #include "hPlayerWorkerMgr.h"
 
 #include "playerDataRpc.h"
-#include "audioLogic.h"
+#include "audioDecUserLogic.h"
 
 void  audioDec::procInitAudioAsk ()
 {
-    auto pLogic = (audioLogic*)(userData());
-    pLogic->setState(audioLogic::audioLogicState_thisNeetInit);
+	auto pLogic = dynamic_cast<audioDecUserLogic*>(getIUserLogicWorker ());
+    pLogic->setState(audioDecUserLogic::audioLogicState_thisNeetInit);
 	gInfo("Rec procInitAudioAsk");
 }

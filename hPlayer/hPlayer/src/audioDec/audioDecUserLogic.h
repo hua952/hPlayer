@@ -1,13 +1,11 @@
-#ifndef _audioLogic_h__
-#define _audioLogic_h__
-#include <memory>
-
+#include "logicWorker.h"
 #include "ffplayCom.h"
 
 class audioDec;
-class audioLogic
+class audioDecUserLogic: public IUserLogicWorker
 {
 public:
+    audioDecUserLogic (audioDec& rServer);
     enum audioLogicState
     {
         audioLogicState_readNotInit,
@@ -15,21 +13,17 @@ public:
         audioLogicState_willExit,
         audioLogicState_ok,
     };
-    audioLogic (audioDec& rDec);
-    ~audioLogic ();
 
-    int onLoopBegin();
-    int onLoopFrame();
-    int onLoopEnd();
     audioLogicState state ();
     void  setState(audioLogicState st);
     int  initThis();
     void  clean();
-
-    audioDec&        getAudioDec();
+    int onLoopBegin() override;
+	int onLoopEnd() override;
+	int onLoopFrame() override;
+    audioDec& getServer(){return m_raudioDec;}
 private:
-    audioDec&        m_rAudioDec;
-    audioLogicState  m_state{audioLogicState_readNotInit};
+    audioDec& m_raudioDec;
     AVFrame* m_frame {nullptr};
+    audioLogicState  m_state{audioLogicState_readNotInit};
 };
-#endif

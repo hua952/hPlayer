@@ -8,14 +8,14 @@
 #include "logicWorkerMgr.h"
 #include "tSingleton.h"
 #include "gLog.h"
-#include "hPlayerWorkerMgr.h"
+#include "hPlayerUserWorkerMgr.h"
+
 #include <SDL.h>
-#include "tSingleton.h"
 #include "hPlayerConfig.h"
 #include "ffplayCom.h"
 
 int ffplayMain(int argc, char **argv);
-int hPlayerWorkerMgr::initLogicUser (int cArg, char** argS, ForLogicFun* pForLogic, int cDefArg, char** defArgS)
+int hPlayerUserWorkerMgr::initLogicUser (int cArg, char** argS, ForLogicFun* pForLogic, int cDefArg, char** defArgS)
 {
     int nRet = 0;
     do {
@@ -43,7 +43,7 @@ int hPlayerWorkerMgr::initLogicUser (int cArg, char** argS, ForLogicFun* pForLog
     return nRet;
 }
 
-void hPlayerWorkerMgr::onAppExit()
+void hPlayerUserWorkerMgr::onAppExit()
 {
     do_exit (getVideoState());
     // SDL_Quit();

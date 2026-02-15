@@ -1,6 +1,10 @@
-#include "audioLogic.h"
-#include "strFun.h"
 #include "audioDec.h"
+#include "audioDecUserLogic.h"
+#include "strFun.h"
+
+audioDecUserLogic::audioDecUserLogic (audioDec& rServer):m_raudioDec(rServer)
+{
+}
 
 static inline
 int cmp_audio_fmts(enum AVSampleFormat fmt1, int64_t channel_count1,
@@ -13,15 +17,8 @@ int cmp_audio_fmts(enum AVSampleFormat fmt1, int64_t channel_count1,
         return channel_count1 != channel_count2 || fmt1 != fmt2;
 }
 
-audioLogic:: audioLogic (audioDec& rDec):m_rAudioDec(rDec)
-{
-}
 
-audioLogic:: ~audioLogic ()
-{
-}
-
-int  audioLogic:: onLoopBegin()
+int  audioDecUserLogic:: onLoopBegin()
 {
     int  nRet = 0;
     do {
@@ -110,7 +107,7 @@ static int audio_thread(void *arg)
     return ret;
 }
 
-int  audioLogic:: onLoopFrame()
+int  audioDecUserLogic:: onLoopFrame()
 {
     int  nRet = 0;
     do {
@@ -220,7 +217,7 @@ int  audioLogic:: onLoopFrame()
     return nRet;
 }
 
-int  audioLogic:: onLoopEnd()
+int  audioDecUserLogic:: onLoopEnd()
 {
     int  nRet = 0;
     do {
@@ -229,17 +226,17 @@ int  audioLogic:: onLoopEnd()
     return nRet;
 }
 
-audioLogic::audioLogicState  audioLogic:: state ()
+audioDecUserLogic::audioLogicState  audioDecUserLogic:: state ()
 {
     return m_state;
 }
 
-void   audioLogic:: setState(audioLogicState st)
+void   audioDecUserLogic:: setState(audioLogicState st)
 {
     m_state = st;
 }
 
-int   audioLogic:: initThis()
+int   audioDecUserLogic:: initThis()
 {
     int   nRet = 0;
     do {
@@ -256,15 +253,10 @@ int   audioLogic:: initThis()
     return nRet;
 }
 
-void   audioLogic:: clean()
+void   audioDecUserLogic:: clean()
 {
     VideoState *is = getVideoState ();
     avfilter_graph_free(&is->agraph);
     av_frame_free(&m_frame);
-}
-
-audioDec&         audioLogic:: getAudioDec()
-{
-    return m_rAudioDec;
 }
 

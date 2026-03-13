@@ -5,17 +5,22 @@
 #include <memory>
 #include "loopHandleS.h"
 #include "logicWorker.h"
+#include "audioDecUserLogic.h"
+
 #include "hPlayerWorkerMgr.h"
 
 #include "playerDataRpc.h"
-#include "audioDecUserLogic.h"
 
-void  audioDec::procAudioDecExitNtfAsk ()
+static int sprocAudioDecExitNtfAsk (audioDecUserLogic& rLogic, audioDec& rServer)
 {
-	auto pLogic = dynamic_cast<audioDecUserLogic*>(getIUserLogicWorker ());
-    pLogic->clean();
-    pLogic->setState(audioDecUserLogic::audioLogicState_willExit);
+    rLogic.clean();
+    rLogic.setState(audioDecUserLogic::audioLogicState_willExit);
     audioDecExitOKNtfAskMsg ask;
-    pLogic->getServer().sendMsg(ask);
+    rServer.sendMsg(ask);
 	gInfo("Rec procAudioDecExitNtfAsk");
+    return procPacketFunRetType_del;
+}
+int  audioDec::procAudioDecExitNtfAsk ()
+{
+    return sprocAudioDecExitNtfAsk(*(dynamic_cast<audioDecUserLogic*>(getIUserLogicWorker ())), *this);
 }

@@ -5,14 +5,19 @@
 #include <memory>
 #include "loopHandleS.h"
 #include "logicWorker.h"
+#include "audioDecUserLogic.h"
+
 #include "hPlayerWorkerMgr.h"
 
 #include "playerDataRpc.h"
-#include "audioDecUserLogic.h"
 
-void  audioDec::procInitAudioAsk ()
+static int sprocInitAudioAsk (audioDecUserLogic& rLogic, audioDec& rServer)
 {
-	auto pLogic = dynamic_cast<audioDecUserLogic*>(getIUserLogicWorker ());
-    pLogic->setState(audioDecUserLogic::audioLogicState_thisNeetInit);
+    rLogic.setState(audioDecUserLogic::audioLogicState_thisNeetInit);
 	gInfo("Rec procInitAudioAsk");
+    return procPacketFunRetType_del;
+}
+int  audioDec::procInitAudioAsk ()
+{
+    return sprocInitAudioAsk(*(dynamic_cast<audioDecUserLogic*>(getIUserLogicWorker ())), *this);
 }

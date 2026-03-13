@@ -5,19 +5,18 @@
 #include <memory>
 #include "loopHandleS.h"
 #include "logicWorker.h"
+#include "mainUserLogic.h"
+
 #include "hPlayerWorkerMgr.h"
 
 #include "playerDataRpc.h"
-#include "mainLogic.h"
-#include "logicWorker.h"
-#include "imGuiMgr.h"
 
-void  main::procPlayURLRet (const playURLAsk& rAsk, playURLRet& rRet)
+static int sprocPlayURLRet (mainUserLogic& rLogic, main& rServer, const playURLAsk& rAsk, playURLRet& rRet)
 {
-    if (0 == rRet.m_result) {
-        auto pLogic = (mainLogic*)(userData());
-        auto& imguiMgr = pLogic->imguiMgr ();
-        imguiMgr.setTotalDuration (rRet.m_totalDuration);
-    }
-	gInfo("Rec procPlayURLRet result = "<<rRet.m_result);
+	gInfo("Rec procPlayURLRet");
+    return procPacketFunRetType_del;
+}
+int  main::procPlayURLRet (const playURLAsk& rAsk, playURLRet& rRet)
+{
+    return sprocPlayURLRet(*(dynamic_cast<mainUserLogic*>(getIUserLogicWorker ())), *this,rAsk, rRet);
 }

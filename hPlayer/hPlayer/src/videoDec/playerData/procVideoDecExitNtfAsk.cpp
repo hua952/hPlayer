@@ -5,17 +5,22 @@
 #include <memory>
 #include "loopHandleS.h"
 #include "logicWorker.h"
+#include "videoDecUserLogic.h"
+
 #include "hPlayerWorkerMgr.h"
-#include "videoDecLogic.h"
+
 #include "playerDataRpc.h"
 
-void  videoDec::procVideoDecExitNtfAsk ()
+static int sprocVideoDecExitNtfAsk (videoDecUserLogic& rLogic, videoDec& rServer)
 {
-    auto pLogic = (videoDecLogic *)(userData());
-    pLogic->clean();
-    pLogic->setState(videoDecLogic::videoDecLogicState_willExit);
+    rLogic.clean();
+    rLogic.setState(videoDecUserLogic::videoDecLogicState_willExit);
     videoDecExitOKNtfAskMsg  msg;
-    auto& th = pLogic->getVideoDec();
-    th.sendMsg(msg);
+    rServer.sendMsg(msg);
 	gInfo("Rec procVideoDecExitNtfAsk");
+    return procPacketFunRetType_del;
+}
+int  videoDec::procVideoDecExitNtfAsk ()
+{
+    return sprocVideoDecExitNtfAsk(*(dynamic_cast<videoDecUserLogic*>(getIUserLogicWorker ())), *this);
 }

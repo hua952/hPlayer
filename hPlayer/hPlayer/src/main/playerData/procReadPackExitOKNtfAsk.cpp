@@ -5,14 +5,21 @@
 #include <memory>
 #include "loopHandleS.h"
 #include "logicWorker.h"
+#include "mainUserLogic.h"
+
 #include "hPlayerWorkerMgr.h"
-#include "mainLogic.h"
+
 #include "playerDataRpc.h"
 
-void  main::procReadPackExitOKNtfAsk ()
+static int sprocReadPackExitOKNtfAsk (mainUserLogic& rLogic, main& rServer)
 {
-    auto pLogic = (mainLogic*)(userData());
-    pLogic->setState(mainLogic::mainState_willExit);
-    ntfOtherLocalServerExit();
-    gInfo("Rec procReadPackExitOKNtfAsk");
+	gInfo("Rec procReadPackExitOKNtfAsk");
+
+    rLogic.setState(mainUserLogic::mainState_willExit);
+    rServer.ntfOtherLocalServerExit();
+    return procPacketFunRetType_del;
+}
+int  main::procReadPackExitOKNtfAsk ()
+{
+    return sprocReadPackExitOKNtfAsk(*(dynamic_cast<mainUserLogic*>(getIUserLogicWorker ())), *this);
 }

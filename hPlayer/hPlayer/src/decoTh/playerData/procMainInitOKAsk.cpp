@@ -5,14 +5,20 @@
 #include <memory>
 #include "loopHandleS.h"
 #include "logicWorker.h"
+#include "decoThUserLogic.h"
+
 #include "hPlayerWorkerMgr.h"
 
 #include "playerDataRpc.h"
-#include "readPackLogic.h"
 
-void  decoTh::procMainInitOKAsk ()
+static int sprocMainInitOKAsk (decoThUserLogic& rLogic, decoTh& rServer)
 {
-    auto pLogic = (readPackLogic*)(userData());
-    pLogic->setState(readPackLogic::readState_thisNeetInit);
 	gInfo("Rec procMainInitOKAsk");
+    rLogic.setState(decoThUserLogic::readState_thisNeetInit);
+    return procPacketFunRetType_del;
+}
+
+int  decoTh::procMainInitOKAsk ()
+{
+    return sprocMainInitOKAsk(*(dynamic_cast<decoThUserLogic*>(getIUserLogicWorker ())), *this);
 }

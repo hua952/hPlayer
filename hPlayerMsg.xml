@@ -69,5 +69,9 @@
             <ask>
             </ask>
         </subtitleqDecExitOKNtf>
+        <NeetExitNtf>
+            <ask>
+            </ask>
+        </NeetExitNtf>
     </playerData>
 </rpc>

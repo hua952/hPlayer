@@ -5,13 +5,20 @@
 #include <memory>
 #include "loopHandleS.h"
 #include "logicWorker.h"
+#include "videoDecUserLogic.h"
+
 #include "hPlayerWorkerMgr.h"
-#include "videoDecLogic.h"
+
 #include "playerDataRpc.h"
 
-void  videoDec::procInitvideoDecAsk ()
+static int sprocInitvideoDecAsk (videoDecUserLogic& rLogic, videoDec& rServer)
 {
-    auto pLogic = (videoDecLogic *)(userData());
-    pLogic->setState(videoDecLogic::videoDecLogicState_thisNeetInit);
+
+    rLogic.setState(videoDecUserLogic::videoDecLogicState_thisNeetInit);
 	gInfo("Rec procInitvideoDecAsk");
+    return procPacketFunRetType_del;
+}
+int  videoDec::procInitvideoDecAsk ()
+{
+    return sprocInitvideoDecAsk(*(dynamic_cast<videoDecUserLogic*>(getIUserLogicWorker ())), *this);
 }

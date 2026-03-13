@@ -5,30 +5,24 @@
 #include <memory>
 #include "loopHandleS.h"
 #include "logicWorker.h"
+#include "decoThUserLogic.h"
+
 #include "hPlayerWorkerMgr.h"
-#include "readPackLogic.h"
+
 #include "playerDataRpc.h"
 
-static bool sendEmptyPack(void* pU)
+static int sprocVideoDecExitOKNtfAsk (decoThUserLogic& rLogic, decoTh& rServer)
 {
-    auto pLogic = (readPackLogic*)(pU);
-    pLogic->sendEmptyAudioPack();
-    return false;
-}
-void  decoTh::procVideoDecExitOKNtfAsk ()
-{
-    auto pLogic = (readPackLogic*)(userData());
-    pLogic->setVideoHaveClean (true);
-    auto& th = pLogic->getDecoTh ();
+    // readPackExitOKNtfAskMsg  msg;
+    // rServer.sendMsg(msg);
+
     audioDecExitNtfAskMsg ask;
-    th.sendMsg(ask);
-    th.addTimer(50, sendEmptyPack, pLogic);
-    /*
-    pLogic->clean();
-    readPackExitOKNtfAskMsg  msg;
-    auto& th = pLogic->getDecoTh ();
-    th.sendMsg(msg);
-    pLogic->setState (readPackLogic::readState_willExit);
-    */
+    rServer.sendMsg(ask);
+    rLogic.sendEmptyAudioPack();
 	gInfo("Rec procVideoDecExitOKNtfAsk");
+    return procPacketFunRetType_del;
+}
+int  decoTh::procVideoDecExitOKNtfAsk ()
+{
+    return sprocVideoDecExitOKNtfAsk(*(dynamic_cast<decoThUserLogic*>(getIUserLogicWorker ())), *this);
 }

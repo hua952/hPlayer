@@ -34,7 +34,7 @@ set(appFrameDir "${appFrameDirDef}" CACHE PATH "Path of appFrame install")
 
 message(STATUS "最终appFrameDir 是: ${appFrameDir}")
 
-SET(CMAKE_INSTALL_PREFIX C:/work/hPlayer/hPlayerInstall)
+SET(CMAKE_INSTALL_PREFIX C:/work/hplayer/hPlayerInstall)
 add_subdirectory (gen)
 	
 add_subdirectory (hPlayer)

@@ -5,17 +5,18 @@
 #include <memory>
 #include "loopHandleS.h"
 #include "logicWorker.h"
+#include "decoThUserLogic.h"
+
 #include "hPlayerWorkerMgr.h"
 
 #include "playerDataRpc.h"
-#include "ffmpegDecoder.h"
 
-void  decoTh::procPlayURLAsk (const playURLAsk& rAsk , playURLRet& rRet)
+static int sprocPlayURLAsk (decoThUserLogic& rLogic, decoTh& rServer, const playURLAsk& rAsk , playURLRet& rRet)
 {
 	gInfo("Rec procPlayURLAsk");
-    auto pLogic = (ffmpegDecoder*)(userData());
-    rRet.m_result = pLogic->playFile(rAsk.m_url);
-    if (!rRet.m_result) {
-        rRet.m_totalDuration = pLogic->totalDuration ();
-    }
+    return procPacketFunRetType_del;
+}
+int  decoTh::procPlayURLAsk (const playURLAsk& rAsk , playURLRet& rRet)
+{
+    return sprocPlayURLAsk(*(dynamic_cast<decoThUserLogic*>(getIUserLogicWorker ())), *this,rAsk, rRet);
 }

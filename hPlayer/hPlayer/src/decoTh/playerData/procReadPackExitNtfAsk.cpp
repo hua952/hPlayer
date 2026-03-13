@@ -5,23 +5,28 @@
 #include <memory>
 #include "loopHandleS.h"
 #include "logicWorker.h"
+#include "decoThUserLogic.h"
+
 #include "hPlayerWorkerMgr.h"
-#include "readPackLogic.h"
+
 #include "playerDataRpc.h"
 
-static bool sendEmptyPack(void* pU)
+static int sprocReadPackExitNtfAsk (decoThUserLogic& rLogic, decoTh& rServer)
 {
-    auto pLogic = (readPackLogic*)(pU);
-    pLogic->sendEmptyAudioPack();
-    return false;
+    /*
+    readPackExitOKNtfAskMsg  msg;
+    rServer.sendMsg(msg);
+    */
+
+    subtitleqDecExitNtfAskMsg msg;
+    rServer.sendMsg(msg);
+    rLogic.sendEmptySubtitleqPack ();
+    rLogic.setState (decoThUserLogic::readState_willExit);
+
+	gInfo("Rec procReadPackExitNtfAsk");
+    return procPacketFunRetType_del;
 }
-void  decoTh::procReadPackExitNtfAsk ()
+int  decoTh::procReadPackExitNtfAsk ()
 {
-    auto pLogic = (readPackLogic*)(userData());
-    // pLogic->sendExitNtfToSub();
-    decoTh& rTh = pLogic->getDecoTh();
-    videoDecExitNtfAskMsg msg;
-    rTh.sendMsg(msg);
-    // rTh.addTimer(50, sendEmptyPack, pLogic);
-    gInfo("Rec procReadPackExitNtfAsk");
+    return sprocReadPackExitNtfAsk(*(dynamic_cast<decoThUserLogic*>(getIUserLogicWorker ())), *this);
 }

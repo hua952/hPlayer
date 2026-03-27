@@ -71,14 +71,14 @@ int audioDecUserLogic::onLoopFrame()
 
         if (got_frame) {
             tb.num = 1; tb.den = frame->sample_rate; //tb = (AVRational){1, frame->sample_rate};
-
+// /*
             reconfigure =
                 cmp_audio_fmts(is->audio_filter_src.fmt, is->audio_filter_src.ch_layout.nb_channels,
                         (AVSampleFormat)frame->format, frame->ch_layout.nb_channels)    ||
                 av_channel_layout_compare(&is->audio_filter_src.ch_layout, &frame->ch_layout) ||
                 is->audio_filter_src.freq           != frame->sample_rate ||
                 is->auddec.pkt_serial               != last_serial;
-
+// */
             if (reconfigure) {
                 char buf1[1024], buf2[1024];
                 av_channel_layout_describe(&is->audio_filter_src.ch_layout, buf1, sizeof(buf1));

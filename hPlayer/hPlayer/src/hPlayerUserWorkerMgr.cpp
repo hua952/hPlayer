@@ -9,6 +9,7 @@
 #include "tSingleton.h"
 #include "gLog.h"
 #include "hPlayerUserWorkerMgr.h"
+#include "cppCom.h"
 
 extern "C"
 {
@@ -19,6 +20,7 @@ int hPlayerUserWorkerMgr::initLogicUser (int cArg, char** argS, ForLogicFun* pFo
 {
     int nRet = 0;
     do {
+        tSingleton<globalData>::createSingleton ();
         ffplayMain (cArg, argS);
     } while(0);
     return nRet;

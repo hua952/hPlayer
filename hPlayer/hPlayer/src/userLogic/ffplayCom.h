@@ -191,7 +191,7 @@ typedef struct VideoState {
     int realtime;
 
     Clock audclk;
-    Clock vidclk;
+    /*Clock vidclk;*/
     Clock extclk;
 
     FrameQueue pictq;
@@ -199,7 +199,7 @@ typedef struct VideoState {
     FrameQueue sampq;
 
     Decoder auddec;
-    Decoder viddec;
+    /*Decoder viddec;*/
     Decoder subdec;
 
     int audio_stream;
@@ -256,7 +256,7 @@ typedef struct VideoState {
     double frame_last_filter_delay;
     int video_stream;
     AVStream *video_st;
-    PacketQueue videoq;
+    /* PacketQueue videoq; */
     double max_frame_duration;      // maximum duration of a frame - above this, we consider the jump a timestamp discontinuity
     struct SwsContext *sub_convert_ctx;
     int eof;
@@ -349,7 +349,7 @@ int ffplay_event_loop(VideoState *cur_stream);
 int ffplayMain(int argc, char **argv);
 VideoState* getVideoState();
 void do_exit(VideoState *is);
-int stream_component_open(VideoState *is, int stream_index);
+/*int stream_component_open(VideoState *is, int stream_index);*/
 void packet_queue_flush(PacketQueue *q);
 void set_clock_at(Clock *c, double pts, int serial, double time);
 void set_clock(Clock *c, double pts, int serial);
@@ -360,7 +360,7 @@ int stream_has_enough_packets(AVStream *st, int stream_id, PacketQueue *queue);
 
 void frame_queue_push(FrameQueue *f);
 Frame *frame_queue_peek_writable(FrameQueue *f);
-inline int cmp_audio_fmts(enum AVSampleFormat fmt1, int64_t channel_count1,
+int cmp_audio_fmts(enum AVSampleFormat fmt1, int64_t channel_count1,
                    enum AVSampleFormat fmt2, int64_t channel_count2);
 int decoder_decode_frame(Decoder *d, AVFrame *frame, AVSubtitle *sub);
 int queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial);
@@ -379,4 +379,14 @@ int is_realtime(AVFormatContext *s);
 int decode_interrupt_cb(void *ctx);
 void stream_seek(VideoState *is, int64_t pos, int64_t rel, int by_bytes);
 int frame_queue_nb_remaining(FrameQueue *f);
+void set_clock_speed(Clock *c, double speed);
+int get_master_sync_type(VideoState *is);
+double get_clock(Clock *c);
+void video_display(VideoState *is);
+Frame *frame_queue_peek_last(FrameQueue *f);
+Frame *frame_queue_peek(FrameQueue *f);
+void frame_queue_next(FrameQueue *f);
+
+Frame *frame_queue_peek_next(FrameQueue *f);
+double vp_duration(VideoState *is, Frame *vp, Frame *nextvp);
 #endif

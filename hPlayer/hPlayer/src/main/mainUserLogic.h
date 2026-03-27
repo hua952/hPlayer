@@ -1,5 +1,8 @@
 #include "logicWorker.h"
-
+extern "C"
+{
+    #include "ffplayCom.h"
+}
 class main;
 class mainUserLogic: public IUserLogicWorker
 {

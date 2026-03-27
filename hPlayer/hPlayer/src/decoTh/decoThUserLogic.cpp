@@ -1,11 +1,31 @@
 #include "decoTh.h"
 #include "decoThUserLogic.h"
 #include "gLog.h"
+#include "cppCom.h"
+#include "tSingleton.h"
+
 extern "C"
 {
     #include "ffplayCom.h"
+
+void cpp_check_external_clock_speed(VideoState *is) {
+    auto& rGlobal = tSingleton<globalData>::single();
+    auto& rVidPackQ = rGlobal.vidPackQ;
+    auto vSize = rVidPackQ.size();
+   if (is->video_stream >= 0 && vSize <= EXTERNAL_CLOCK_MIN_FRAMES ||
+       is->audio_stream >= 0 && is->audioq.nb_packets <= EXTERNAL_CLOCK_MIN_FRAMES) {
+       set_clock_speed(&is->extclk, FFMAX(EXTERNAL_CLOCK_SPEED_MIN, is->extclk.speed - EXTERNAL_CLOCK_SPEED_STEP));
+   } else if ((is->video_stream < 0 || vSize > EXTERNAL_CLOCK_MAX_FRAMES) &&
+              (is->audio_stream < 0 || is->audioq.nb_packets > EXTERNAL_CLOCK_MAX_FRAMES)) {
+       set_clock_speed(&is->extclk, FFMIN(EXTERNAL_CLOCK_SPEED_MAX, is->extclk.speed + EXTERNAL_CLOCK_SPEED_STEP));
+   } else {
+       double speed = is->extclk.speed;
+       if (speed != 1.0)
+           set_clock_speed(&is->extclk, speed + EXTERNAL_CLOCK_SPEED_STEP * (1.0 - speed) / fabs(1.0 - speed));
+   }
 }
 
+}
 
 decoThUserLogic::decoThUserLogic (decoTh& rServer):m_rdecoTh(rServer)
 {
@@ -20,7 +40,203 @@ int decoThUserLogic::onLoopBegin()
 }
 
 
+static int cpp_decoder_init(cppDecoder& rD, AVCodecContext *avctx, packQue* queue) {
+    memset(&rD, 0, sizeof(rD));
+    rD.pkt = av_packet_alloc();
+    if (!rD.pkt)
+        return AVERROR(ENOMEM);
+    rD.avctx = avctx;
+    rD.queue = queue;
+    rD.start_pts = AV_NOPTS_VALUE;
+    rD.pkt_serial = -1;
+    return 0;
+}
+
 /* open a given stream. Return 0 if OK */
+static int cpp_stream_component_open_base(VideoState *is, int stream_index, logicWorker& rWork)
+{
+    AVFormatContext *ic = is->ic;
+    AVCodecContext *avctx;
+    const AVCodec *codec;
+    const char *forced_codec_name = NULL;
+    AVDictionary *opts = NULL;
+    int sample_rate;
+    AVChannelLayout ch_layout = { 0 };
+    int ret = 0;
+    int stream_lowres = lowres;
+    auto& rGlobal = tSingleton<globalData>::single();
+
+    if (stream_index < 0 || stream_index >= ic->nb_streams)
+        return -1;
+
+    avctx = avcodec_alloc_context3(NULL);
+    if (!avctx)
+        return AVERROR(ENOMEM);
+
+    ret = avcodec_parameters_to_context(avctx, ic->streams[stream_index]->codecpar);
+    if (ret < 0)
+        goto fail;
+    avctx->pkt_timebase = ic->streams[stream_index]->time_base;
+
+    codec = avcodec_find_decoder(avctx->codec_id);
+
+    switch(avctx->codec_type){
+        case AVMEDIA_TYPE_AUDIO   : is->last_audio_stream    = stream_index; forced_codec_name =    audio_codec_name; break;
+        case AVMEDIA_TYPE_SUBTITLE: is->last_subtitle_stream = stream_index; forced_codec_name = subtitle_codec_name; break;
+        case AVMEDIA_TYPE_VIDEO   : is->last_video_stream    = stream_index; forced_codec_name =    video_codec_name; break;
+    }
+    if (forced_codec_name)
+        codec = avcodec_find_decoder_by_name(forced_codec_name);
+    if (!codec) {
+        if (forced_codec_name) av_log(NULL, AV_LOG_WARNING,
+                                      "No codec could be found with name '%s'\n", forced_codec_name);
+        else                   av_log(NULL, AV_LOG_WARNING,
+                                      "No decoder could be found for codec %s\n", avcodec_get_name(avctx->codec_id));
+        ret = AVERROR(EINVAL);
+        goto fail;
+    }
+
+    avctx->codec_id = codec->id;
+    if (stream_lowres > codec->max_lowres) {
+        av_log(avctx, AV_LOG_WARNING, "The maximum value for lowres supported by the decoder is %d\n",
+                codec->max_lowres);
+        stream_lowres = codec->max_lowres;
+    }
+    avctx->lowres = stream_lowres;
+
+    if (fast)
+        avctx->flags2 |= AV_CODEC_FLAG2_FAST;
+
+    ret = filter_codec_opts(codec_opts, avctx->codec_id, ic,
+                            ic->streams[stream_index], codec, &opts, NULL);
+    if (ret < 0)
+        goto fail;
+
+    if (!av_dict_get(opts, "threads", NULL, 0))
+        av_dict_set(&opts, "threads", "auto", 0);
+    if (stream_lowres)
+        av_dict_set_int(&opts, "lowres", stream_lowres, 0);
+
+    av_dict_set(&opts, "flags", "+copy_opaque", AV_DICT_MULTIKEY);
+
+    if (avctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+        ret = create_hwaccel(&avctx->hw_device_ctx);
+        if (ret < 0)
+            goto fail;
+    }
+
+    if ((ret = avcodec_open2(avctx, codec, &opts)) < 0) {
+        goto fail;
+    }
+    ret = check_avoptions(opts);
+    if (ret < 0)
+        goto fail;
+
+    is->eof = 0;
+    ic->streams[stream_index]->discard = AVDISCARD_DEFAULT;
+    switch (avctx->codec_type) {
+    case AVMEDIA_TYPE_AUDIO:
+        {
+            AVFilterContext *sink;
+
+            is->audio_filter_src.freq           = avctx->sample_rate;
+            ret = av_channel_layout_copy(&is->audio_filter_src.ch_layout, &avctx->ch_layout);
+            if (ret < 0)
+                goto fail;
+            is->audio_filter_src.fmt            = avctx->sample_fmt;
+            if ((ret = configure_audio_filters(is, afilters, 0)) < 0)
+                goto fail;
+            sink = is->out_audio_filter;
+            sample_rate    = av_buffersink_get_sample_rate(sink);
+            ret = av_buffersink_get_ch_layout(sink, &ch_layout);
+            if (ret < 0)
+                goto fail;
+        }
+
+        /* prepare audio output */
+        if ((ret = audio_open(is, &ch_layout, sample_rate, &is->audio_tgt)) < 0)
+            goto fail;
+        is->audio_hw_buf_size = ret;
+        is->audio_src = is->audio_tgt;
+        is->audio_buf_size  = 0;
+        is->audio_buf_index = 0;
+
+        /* init averaging filter */
+        is->audio_diff_avg_coef  = exp(log(0.01) / AUDIO_DIFF_AVG_NB);
+        is->audio_diff_avg_count = 0;
+        /* since we do not have a precise anough audio FIFO fullness,
+           we correct audio sync only if larger than this threshold */
+        is->audio_diff_threshold = (double)(is->audio_hw_buf_size) / is->audio_tgt.bytes_per_sec;
+
+        is->audio_stream = stream_index;
+        is->audio_st = ic->streams[stream_index];
+
+        if ((ret = decoder_init(&is->auddec, avctx, &is->audioq, is->continue_read_thread)) < 0)
+            goto fail;
+        if (is->ic->iformat->flags & AVFMT_NOTIMESTAMPS) {
+            is->auddec.start_pts = is->audio_st->start_time;
+            is->auddec.start_pts_tb = is->audio_st->time_base;
+        }
+        /*
+        if ((ret = decoder_start(&is->auddec, audio_thread, "audio_decoder", is)) < 0)
+            goto out;
+            */
+        packet_queue_start(is->auddec.queue);
+        {
+            initAudioAskMsg  msg;
+            rWork.sendMsg(msg);
+        }
+        SDL_PauseAudioDevice(audio_dev, 0);
+        break;
+    case AVMEDIA_TYPE_VIDEO:
+        is->video_stream = stream_index;
+        is->video_st = ic->streams[stream_index];
+
+        // if ((ret = decoder_init(&is->viddec, avctx, &is->videoq, is->continue_read_thread)) < 0)
+        if ((ret = cpp_decoder_init(rGlobal.vidDec, avctx, &rGlobal.vidPackQ)) < 0)
+            goto fail;
+        /*
+        if ((ret = decoder_start(&is->viddec, video_thread, "video_decoder", is)) < 0)
+            goto out;
+        */
+        // packet_queue_start(is->viddec.queue);
+        rGlobal.vidPackQ.start();
+        {
+            initvideoDecAskMsg msg;
+            rWork.sendMsg(msg);
+        }
+        is->queue_attachments_req = 1;
+        break;
+    case AVMEDIA_TYPE_SUBTITLE:
+        is->subtitle_stream = stream_index;
+        is->subtitle_st = ic->streams[stream_index];
+
+        if ((ret = decoder_init(&is->subdec, avctx, &is->subtitleq, is->continue_read_thread)) < 0)
+            goto fail;
+        /*
+        if ((ret = decoder_start(&is->subdec, subtitle_thread, "subtitle_decoder", is)) < 0)
+            goto out;
+        */
+        packet_queue_start(is->subdec.queue);
+        {
+            subtitleqAskMsg msg;
+            rWork.sendMsg(msg);
+        }
+        break;
+    default:
+        break;
+    }
+    goto out;
+
+fail:
+    avcodec_free_context(&avctx);
+out:
+    av_channel_layout_uninit(&ch_layout);
+    av_dict_free(&opts);
+
+    return ret;
+}
+
 static int stream_component_open_base(VideoState *is, int stream_index, logicWorker& rWork)
 {
     AVFormatContext *ic = is->ic;
@@ -156,21 +372,20 @@ static int stream_component_open_base(VideoState *is, int stream_index, logicWor
         SDL_PauseAudioDevice(audio_dev, 0);
         break;
     case AVMEDIA_TYPE_VIDEO:
+        /*
         is->video_stream = stream_index;
         is->video_st = ic->streams[stream_index];
 
         if ((ret = decoder_init(&is->viddec, avctx, &is->videoq, is->continue_read_thread)) < 0)
             goto fail;
-        /*
-        if ((ret = decoder_start(&is->viddec, video_thread, "video_decoder", is)) < 0)
-            goto out;
-        */
+        
         packet_queue_start(is->viddec.queue);
         {
             initvideoDecAskMsg msg;
             rWork.sendMsg(msg);
         }
         is->queue_attachments_req = 1;
+        */
         break;
     case AVMEDIA_TYPE_SUBTITLE:
         is->subtitle_stream = stream_index;
@@ -202,9 +417,36 @@ out:
     return ret;
 }
 
+/*
+int cpp_packet_queue_put(PacketQueue *q, AVPacket *pkt)
+{
+    AVPacket *pkt1;
+    int ret;
+
+    pkt1 = av_packet_alloc();
+    if (!pkt1) {
+        av_packet_unref(pkt);
+        return -1;
+    }
+    av_packet_move_ref(pkt1, pkt);
+
+    SDL_LockMutex(q->mutex);
+    ret = cpp_packet_queue_put_private(q, pkt1);
+    SDL_UnlockMutex(q->mutex);
+
+    if (ret < 0)
+        av_packet_free(&pkt1);
+
+    return ret;
+}
+*/
+
 int decoThUserLogic::onLoopFrame()
 {
     int nRet = 0;
+    auto& rGlobal = tSingleton<globalData>::single();
+    auto& rDecoder = rGlobal.vidDec;
+    auto& rVidPackQ = rGlobal.vidPackQ;
     do {
         auto thisState = state ();
         if (readState_mainNotInit == thisState ||  readState_waiteSubExit == thisState || readState_willExit == thisState) [[unlikely]]{
@@ -262,8 +504,10 @@ int decoThUserLogic::onLoopFrame()
                     packet_queue_flush(&is->audioq);
                 if (is->subtitle_stream >= 0)
                     packet_queue_flush(&is->subtitleq);
-                if (is->video_stream >= 0)
-                    packet_queue_flush(&is->videoq);
+                if (is->video_stream >= 0) {
+                    rVidPackQ.cleanForSeek();
+                    // packet_queue_flush(&is->videoq);
+                }
                 if (is->seek_flags & AVSEEK_FLAG_BYTE) {
                    set_clock(&is->extclk, NAN, 0);
                 } else {
@@ -283,27 +527,37 @@ int decoThUserLogic::onLoopFrame()
                     break;
                     // goto fail;
                 }
-                packet_queue_put(&is->videoq, pkt);
-                packet_queue_put_nullpacket(&is->videoq, pkt, is->video_stream);
+                // packet_queue_put(&is->videoq, pkt);
+                auto bC = rVidPackQ.procLastUnpushPack();
+                if (!bC) {
+                    break;
+                }
+                rVidPackQ.pushPack (pkt);
+                pkt->stream_index = is->video_stream;
+                rVidPackQ.pushImportant(pkt);
+                // packet_queue_put_nullpacket(&is->videoq, pkt, is->video_stream);
             }
             is->queue_attachments_req = 0;
         }
 
         /* if the queue are full, no need to read more */
         if (infinite_buffer<1 &&
-              (is->audioq.size + is->videoq.size + is->subtitleq.size > MAX_QUEUE_SIZE
+              (is->audioq.size + rVidPackQ.size() + is->subtitleq.size > MAX_QUEUE_SIZE
             || (stream_has_enough_packets(is->audio_st, is->audio_stream, &is->audioq) &&
-                stream_has_enough_packets(is->video_st, is->video_stream, &is->videoq) &&
+                // stream_has_enough_packets(is->video_st, is->video_stream, &is->videoq) &&
+                !rVidPackQ.mabeNeetPush () &&
                 stream_has_enough_packets(is->subtitle_st, is->subtitle_stream, &is->subtitleq)))) {
             /* wait 10 ms */
-            SDL_LockMutex(wait_mutex);
-            SDL_CondWaitTimeout(is->continue_read_thread, wait_mutex, 10);
-            SDL_UnlockMutex(wait_mutex);
+            
+            // SDL_LockMutex(wait_mutex);
+            // SDL_CondWaitTimeout(is->continue_read_thread, wait_mutex, 10);
+            // SDL_UnlockMutex(wait_mutex);
             break;
         }
         if (!is->paused &&
             (!is->audio_st || (is->auddec.finished == is->audioq.serial && frame_queue_nb_remaining(&is->sampq) == 0)) &&
-            (!is->video_st || (is->viddec.finished == is->videoq.serial && frame_queue_nb_remaining(&is->pictq) == 0))) {
+            // (!is->video_st || (is->viddec.finished == is->videoq.serial && frame_queue_nb_remaining(&is->pictq) == 0))) {
+            (!is->video_st || (rDecoder.finished == rVidPackQ.serial() && frame_queue_nb_remaining(&is->pictq) == 0))) {
             if (loop != 1 && (!loop || --loop)) {
                 stream_seek(is, start_time != AV_NOPTS_VALUE ? start_time : 0, 0, 0);
             } else if (autoexit) {
@@ -313,13 +567,25 @@ int decoThUserLogic::onLoopFrame()
                 break;
             }
         }
+        auto bC = rVidPackQ.procLastUnpushPack();
+        if (!bC) {
+            break;
+        }
         ret = av_read_frame(ic, pkt);
         if (ret < 0) {
             if ((ret == AVERROR_EOF || avio_feof(ic->pb)) && !is->eof) {
-                if (is->video_stream >= 0)
-                    packet_queue_put_nullpacket(&is->videoq, pkt, is->video_stream);
-                if (is->audio_stream >= 0)
+                if (is->video_stream >= 0) {
+                    pkt->stream_index = is->video_stream;
+                    rVidPackQ.pushImportant(pkt);
+                    bC = rVidPackQ.procLastUnpushPack();
+                    if (!bC) {
+                        break;
+                    }
+                    // packet_queue_put_nullpacket(&is->videoq, pkt, is->video_stream);
+                }
+                if (is->audio_stream >= 0) {
                     packet_queue_put_nullpacket(&is->audioq, pkt, is->audio_stream);
+                }
                 if (is->subtitle_stream >= 0)
                     packet_queue_put_nullpacket(&is->subtitleq, pkt, is->subtitle_stream);
                 is->eof = 1;
@@ -355,7 +621,8 @@ int decoThUserLogic::onLoopFrame()
             packet_queue_put(&is->audioq, pkt);
         } else if (pkt->stream_index == is->video_stream && pkt_in_play_range
                    && !(is->video_st->disposition & AV_DISPOSITION_ATTACHED_PIC)) {
-            packet_queue_put(&is->videoq, pkt);
+            // packet_queue_put(&is->videoq, pkt);
+            rVidPackQ.pushPack (pkt);
         } else if (pkt->stream_index == is->subtitle_stream && pkt_in_play_range) {
             packet_queue_put(&is->subtitleq, pkt);
         } else {
@@ -566,7 +833,7 @@ int  decoThUserLogic:: initThis()
 
         ret = -1;
         if (st_index[AVMEDIA_TYPE_VIDEO] >= 0) {
-            ret = stream_component_open_base(is, st_index[AVMEDIA_TYPE_VIDEO], getServer());
+            ret = cpp_stream_component_open_base(is, st_index[AVMEDIA_TYPE_VIDEO], getServer());
         }
         if (is->show_mode == VideoState::SHOW_MODE_NONE)
             is->show_mode = ret >= 0 ? VideoState::SHOW_MODE_VIDEO : VideoState::SHOW_MODE_RDFT;
@@ -642,5 +909,9 @@ void     decoThUserLogic:: sendEmptySubtitleqPack()
     auto pkt = av_packet_alloc();
     VideoState *is = getVideoState();
     packet_queue_put_nullpacket(&is->subtitleq, pkt, is->subtitle_stream);
+}
+
+void cpp_decoder_destroy(cppDecoder& rD)
+{
 }
 

@@ -1,9 +1,9 @@
-#include "logicWorker.h"
-
 extern "C"
 {
     #include "ffplayCom.h"
 }
+
+#include "logicWorker.h"
 
 class audioDec;
 class audioDecUserLogic: public IUserLogicWorker

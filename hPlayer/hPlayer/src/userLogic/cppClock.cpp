@@ -22,12 +22,12 @@ cppClock:: ~cppClock ()
 
 int  cppClock:: serial ()
 {
-    return m_serial;
+    return m_aSerial.load(std::memory_order_relaxed);
 }
 
 void  cppClock:: setSerial (int v)
 {
-    m_serial = v;
+    m_aSerial.store(v, std::memory_order_relaxed);
 }
 
 void  cppClock:: setClock(double pts, int serial)
@@ -39,25 +39,28 @@ void  cppClock:: setClock(double pts, int serial)
 
 double   cppClock:: pts ()
 {
-    return m_pts;
+    return m_aPts.load(std::memory_order_relaxed);
 }
 
 void     cppClock:: setPts(double v)
 {
-    m_pts = v;
+    m_aPts.store(v, std::memory_order_relaxed);
 }
 
 void  cppClock:: setClockAt(double pts, int serial, double time)
 {
-    setPts(pts);
+    // setPts(pts);
     last_updated = time;
-    pts_drift = this->pts() - time;
-    m_serial = serial;
+    pts_drift = pts - time;
+    // setSerial(serial);
+    setPts(pts);
+    m_aSerial.store(pts, std::memory_order_release);
 }
 
 double  cppClock:: getClock()
 {
-    if (m_packQ.serial() != m_serial)
+    auto aSer = m_aSerial.load(std::memory_order_acquire);
+    if (m_packQ.serial() != aSer)
         return NAN;
     if (m_paused) {
         return pts();

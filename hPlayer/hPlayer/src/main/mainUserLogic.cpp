@@ -8,9 +8,52 @@
 
 #include "tSingleton.h"
 
+static double vp_duration(VideoState *is, cppFrame *vp, cppFrame *nextvp) {
+    if (vp->serial == nextvp->serial) {
+        double duration = nextvp->pts - vp->pts;
+        if (isnan(duration) || duration <= 0 || duration > is->max_frame_duration)
+            return vp->duration;
+        else
+            return duration;
+    } else {
+        return 0.0;
+    }
+}
+
 extern "C"
 {
+static double cpp_compute_target_delay(double delay, VideoState *is)
+{
+    double sync_threshold, diff = 0;
+    auto& rGlobal = tSingleton<globalData>::single();
+    auto& rVidClk = rGlobal.vidClk;
 
+    /* update delay to follow master synchronisation source */
+    if (get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER) {
+        /* if video is slave, we try to correct big delays by
+           duplicating or deleting a frame */
+        // diff = get_clock(&is->vidclk) - cpp_get_master_clock(is);
+        diff = rVidClk.getClock() - cpp_get_master_clock(is);
+
+        /* skip or repeat frame. We take into account the
+           delay to compute the threshold. I still don't know
+           if it is the best guess */
+        sync_threshold = FFMAX(AV_SYNC_THRESHOLD_MIN, FFMIN(AV_SYNC_THRESHOLD_MAX, delay));
+        if (!isnan(diff) && fabs(diff) < is->max_frame_duration) {
+            if (diff <= -sync_threshold)
+                delay = FFMAX(0, delay + diff);
+            else if (diff >= sync_threshold && delay > AV_SYNC_FRAMEDUP_THRESHOLD)
+                delay = delay + diff;
+            else if (diff >= sync_threshold)
+                delay = 2 * delay;
+        }
+    }
+
+    av_log(NULL, AV_LOG_TRACE, "video: delay=%0.3f A-V=%f\n",
+            delay, -diff);
+
+    return delay;
+}
 void cpp_stream_toggle_pause(VideoState *is)
 {
 
@@ -160,6 +203,106 @@ static void update_video_pts(VideoState *is, double pts, int serial)
 
 extern "C"
 {
+void cpp_video_image_display(VideoState *is)
+{
+    // Frame *vp;
+    Frame *sp = NULL;
+    cppFrame *vp;
+    // cppFrame *sp = NULL;
+
+    SDL_Rect rect;
+
+    auto& rGlobal = tSingleton<globalData>::single();
+    // auto& rDecoder = rGlobal.vidDec;
+    // auto& rVidPackQ = rGlobal.vidPackQ;
+    // auto& rVidClk = rGlobal.vidClk;
+    auto& rPictQ  = rGlobal.m_pictQ;
+
+    // vp = frame_queue_peek_last(&is->pictq);
+    vp = rPictQ.lastFrame();
+    if (vk_renderer) {
+        vk_renderer_display(vk_renderer, vp->frame);
+        return;
+    }
+
+    if (is->subtitle_st) {
+        if (frame_queue_nb_remaining(&is->subpq) > 0) {
+            sp = frame_queue_peek(&is->subpq);
+
+            if (vp->pts >= sp->pts + ((float) sp->sub.start_display_time / 1000)) {
+                if (!sp->uploaded) {
+                    uint8_t* pixels[4];
+                    int pitch[4];
+                    int i;
+                    if (!sp->width || !sp->height) {
+                        sp->width = vp->width;
+                        sp->height = vp->height;
+                    }
+                    if (realloc_texture(&is->sub_texture, SDL_PIXELFORMAT_ARGB8888, sp->width, sp->height, SDL_BLENDMODE_BLEND, 1) < 0)
+                        return;
+
+                    for (i = 0; i < sp->sub.num_rects; i++) {
+                        AVSubtitleRect *sub_rect = sp->sub.rects[i];
+
+                        sub_rect->x = av_clip(sub_rect->x, 0, sp->width );
+                        sub_rect->y = av_clip(sub_rect->y, 0, sp->height);
+                        sub_rect->w = av_clip(sub_rect->w, 0, sp->width  - sub_rect->x);
+                        sub_rect->h = av_clip(sub_rect->h, 0, sp->height - sub_rect->y);
+
+                        is->sub_convert_ctx = sws_getCachedContext(is->sub_convert_ctx,
+                            sub_rect->w, sub_rect->h, AV_PIX_FMT_PAL8,
+                            sub_rect->w, sub_rect->h, AV_PIX_FMT_BGRA,
+                            0, NULL, NULL, NULL);
+                        if (!is->sub_convert_ctx) {
+                            av_log(NULL, AV_LOG_FATAL, "Cannot initialize the conversion context\n");
+                            return;
+                        }
+                        if (!SDL_LockTexture(is->sub_texture, (SDL_Rect *)sub_rect, (void **)pixels, pitch)) {
+                            sws_scale(is->sub_convert_ctx, (const uint8_t * const *)sub_rect->data, sub_rect->linesize,
+                                      0, sub_rect->h, pixels, pitch);
+                            SDL_UnlockTexture(is->sub_texture);
+                        }
+                    }
+                    sp->uploaded = 1;
+                }
+            } else
+                sp = NULL;
+        }
+    }
+
+    calculate_display_rect(&rect, is->xleft, is->ytop, is->width, is->height, vp->width, vp->height, vp->sar);
+    set_sdl_yuv_conversion_mode(vp->frame);
+
+    if (!vp->uploaded) {
+        if (upload_texture(&is->vid_texture, vp->frame) < 0) {
+            set_sdl_yuv_conversion_mode(NULL);
+            return;
+        }
+        vp->uploaded = 1;
+        vp->flip_v = vp->frame->linesize[0] < 0;
+    }
+
+    SDL_RenderCopyEx(renderer, is->vid_texture, NULL, &rect, 0, NULL, (SDL_RendererFlip)(vp->flip_v ? SDL_FLIP_VERTICAL : 0));
+    set_sdl_yuv_conversion_mode(NULL);
+    if (sp) {
+#if USE_ONEPASS_SUBTITLE_RENDER
+        SDL_RenderCopy(renderer, is->sub_texture, NULL, &rect);
+#else
+        int i;
+        double xratio = (double)rect.w / (double)sp->width;
+        double yratio = (double)rect.h / (double)sp->height;
+        for (i = 0; i < sp->sub.num_rects; i++) {
+            SDL_Rect *sub_rect = (SDL_Rect*)sp->sub.rects[i];
+            SDL_Rect target = {.x = rect.x + sub_rect->x * xratio,
+                               .y = rect.y + sub_rect->y * yratio,
+                               .w = sub_rect->w * xratio,
+                               .h = sub_rect->h * yratio};
+            SDL_RenderCopy(renderer, is->sub_texture, sub_rect, &target);
+        }
+#endif
+    }
+}
+
 void cpp_video_refresh(void *opaque, double *remaining_time)
 {
     VideoState *is = (VideoState *)opaque;
@@ -169,6 +312,7 @@ void cpp_video_refresh(void *opaque, double *remaining_time)
     // auto& rDecoder = rGlobal.vidDec;
     auto& rVidPackQ = rGlobal.vidPackQ;
     auto& rVidClk = rGlobal.vidClk;
+    auto& rPictQ  = rGlobal.m_pictQ;
 
     Frame *sp, *sp2;
 
@@ -188,18 +332,22 @@ void cpp_video_refresh(void *opaque, double *remaining_time)
 
     if (is->video_st) {
 retry:
-        if (frame_queue_nb_remaining(&is->pictq) == 0) {
+        // if (frame_queue_nb_remaining(&is->pictq) == 0) {
+        if (rPictQ.size() == 0) {
             // nothing to do, no picture to display in the queue
         } else {
             double last_duration, duration, delay;
-            Frame *vp, *lastvp;
+            cppFrame *vp, *lastvp;
 
             /* dequeue the picture */
-            lastvp = frame_queue_peek_last(&is->pictq);
-            vp = frame_queue_peek(&is->pictq);
+            // lastvp = frame_queue_peek_last(&is->pictq);
+            lastvp = rPictQ.lastFrame();
+            //vp = frame_queue_peek(&is->pictq);
+            vp = rPictQ.curFrame();
 
             if (vp->serial != rVidPackQ.serial()) {
-                frame_queue_next(&is->pictq);
+                //frame_queue_next(&is->pictq);
+                rPictQ.popFrame();
                 goto retry;
             }
 
@@ -223,17 +371,20 @@ retry:
             if (delay > 0 && time - is->frame_timer > AV_SYNC_THRESHOLD_MAX)
                 is->frame_timer = time;
 
-            SDL_LockMutex(is->pictq.mutex);
+            // SDL_LockMutex(is->pictq.mutex);
             if (!isnan(vp->pts))
                 update_video_pts(is, vp->pts, vp->serial);
-            SDL_UnlockMutex(is->pictq.mutex);
+            // SDL_UnlockMutex(is->pictq.mutex);
 
-            if (frame_queue_nb_remaining(&is->pictq) > 1) {
-                Frame *nextvp = frame_queue_peek_next(&is->pictq);
+            // if (frame_queue_nb_remaining(&is->pictq) > 1) {
+            if (rPictQ.size() > 1) {
+                // Frame *nextvp = frame_queue_peek_next(&is->pictq);
+                auto nextvp = rPictQ.nextFrame();
                 duration = vp_duration(is, vp, nextvp);
                 if(!is->step && (framedrop>0 || (framedrop && get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER)) && time > is->frame_timer + duration){
                     is->frame_drops_late++;
-                    frame_queue_next(&is->pictq);
+                    // frame_queue_next(&is->pictq);
+                    rPictQ.popFrame();
                     goto retry;
                 }
             }
@@ -274,7 +425,8 @@ retry:
                 }
             }
 
-            frame_queue_next(&is->pictq);
+            // frame_queue_next(&is->pictq);
+            rPictQ.popFrame();
             is->force_refresh = 1;
 
             if (is->step && !is->paused)
@@ -282,7 +434,8 @@ retry:
         }
 display:
         /* display picture */
-        if (!display_disable && is->force_refresh && is->show_mode == VideoState::SHOW_MODE_VIDEO && is->pictq.rindex_shown)
+        // if (!display_disable && is->force_refresh && is->show_mode == VideoState::SHOW_MODE_VIDEO && is->pictq.rindex_shown)
+        if (!display_disable && is->force_refresh && is->show_mode == VideoState::SHOW_MODE_VIDEO && rPictQ.haveLastFrame())
             video_display(is);
     }
     is->force_refresh = 0;

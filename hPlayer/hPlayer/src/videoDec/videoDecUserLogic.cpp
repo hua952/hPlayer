@@ -150,6 +150,7 @@ int cpp_decoder_decode_frame(cppDecoder& rD, AVFrame *frame, AVSubtitle *sub) {
             }
         }
     }
+    return ret;
 }
 
 int   videoDecUserLogic:: initThis()
@@ -333,7 +334,7 @@ int videoDecUserLogic::onLoopFrame()
             pts = (frame->pts == AV_NOPTS_VALUE) ? NAN : frame->pts * av_q2d(tb);
 
             // ret = queue_picture(is, frame, pts, duration, fd ? fd->pkt_pos : -1, is->viddec.pkt_serial);
-            ret = queue_picture(is, frame, pts, duration, fd ? fd->pkt_pos : -1, rDecoder.pkt_serial);
+            ret = cpp_queue_picture(is, frame, pts, duration, fd ? fd->pkt_pos : -1, rDecoder.pkt_serial);
             av_frame_unref(frame);
             // if (is->videoq.serial != is->viddec.pkt_serial) {
             if (rVidPackQ.serial() != rDecoder.pkt_serial) {

@@ -447,6 +447,7 @@ int decoThUserLogic::onLoopFrame()
     auto& rGlobal = tSingleton<globalData>::single();
     auto& rDecoder = rGlobal.vidDec;
     auto& rVidPackQ = rGlobal.vidPackQ;
+    auto& rPictQ = rGlobal.m_pictQ;
     do {
         auto thisState = state ();
         if (readState_mainNotInit == thisState ||  readState_waiteSubExit == thisState || readState_willExit == thisState) [[unlikely]]{
@@ -557,7 +558,7 @@ int decoThUserLogic::onLoopFrame()
         if (!is->paused &&
             (!is->audio_st || (is->auddec.finished == is->audioq.serial && frame_queue_nb_remaining(&is->sampq) == 0)) &&
             // (!is->video_st || (is->viddec.finished == is->videoq.serial && frame_queue_nb_remaining(&is->pictq) == 0))) {
-            (!is->video_st || (rDecoder.finished == rVidPackQ.serial() && frame_queue_nb_remaining(&is->pictq) == 0))) {
+            (!is->video_st || (rDecoder.finished == rVidPackQ.serial() && rPictQ.size() == 0))) {
             if (loop != 1 && (!loop || --loop)) {
                 stream_seek(is, start_time != AV_NOPTS_VALUE ? start_time : 0, 0, 0);
             } else if (autoexit) {

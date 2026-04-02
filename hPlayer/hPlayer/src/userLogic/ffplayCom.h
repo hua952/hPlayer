@@ -194,7 +194,7 @@ typedef struct VideoState {
     /*Clock vidclk;*/
     Clock extclk;
 
-    FrameQueue pictq;
+    /*FrameQueue pictq;*/
     FrameQueue subpq;
     FrameQueue sampq;
 
@@ -363,7 +363,7 @@ Frame *frame_queue_peek_writable(FrameQueue *f);
 int cmp_audio_fmts(enum AVSampleFormat fmt1, int64_t channel_count1,
                    enum AVSampleFormat fmt2, int64_t channel_count2);
 int decoder_decode_frame(Decoder *d, AVFrame *frame, AVSubtitle *sub);
-int queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial);
+/*int queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial);*/
 int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame);
 int get_video_frame(VideoState *is, AVFrame *frame);
 int subtitle_thread(void *arg);
@@ -386,7 +386,12 @@ void video_display(VideoState *is);
 Frame *frame_queue_peek_last(FrameQueue *f);
 Frame *frame_queue_peek(FrameQueue *f);
 void frame_queue_next(FrameQueue *f);
-
+void calculate_display_rect(SDL_Rect *rect,
+                                   int scr_xleft, int scr_ytop, int scr_width, int scr_height,
+                                   int pic_width, int pic_height, AVRational pic_sar);
+void set_sdl_yuv_conversion_mode(AVFrame *frame);
+int upload_texture(SDL_Texture **tex, AVFrame *frame);
+int realloc_texture(SDL_Texture **texture, Uint32 new_format, int new_width, int new_height, SDL_BlendMode blendmode, int init_texture);
 Frame *frame_queue_peek_next(FrameQueue *f);
-double vp_duration(VideoState *is, Frame *vp, Frame *nextvp);
+/*double vp_duration(VideoState *is, Frame *vp, Frame *nextvp);*/
 #endif

@@ -31,10 +31,14 @@
 void cpp_check_external_clock_speed(VideoState *is);
 void cpp_video_refresh(void *opaque, double *remaining_time);
 double cpp_get_master_clock(VideoState *is);
+/*
 double cpp_compute_target_delay(double delay, VideoState *is);
 Frame* cpp_frame_queue_peek_writable(FrameQueue *f);
-int64_t cpp_frame_queue_last_pos(FrameQueue *f);
+*/
+int cpp_queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial);
+int64_t  cpp_video_frame_queue_last_pos();
 void cpp_stream_toggle_pause(VideoState *is);
+void cpp_video_image_display(VideoState *is);
 
 const char program_name[] = "ffplay";
 const int program_birth_year = 2003;
@@ -440,7 +444,7 @@ static int frame_queue_init(FrameQueue *f, PacketQueue *pktq, int max_size, int 
             return AVERROR(ENOMEM);
     return 0;
 }
-
+/*
 static int video_frame_queue_init(FrameQueue *f, PacketQueue *pktq, int max_size, int keep_last)
 {
     int i;
@@ -461,7 +465,7 @@ static int video_frame_queue_init(FrameQueue *f, PacketQueue *pktq, int max_size
             return AVERROR(ENOMEM);
     return 0;
 }
-
+*/
 
 static void frame_queue_destroy(FrameQueue *f)
 {
@@ -590,7 +594,7 @@ static inline void fill_rectangle(int x, int y, int w, int h)
         SDL_RenderFillRect(renderer, &rect);
 }
 
-static int realloc_texture(SDL_Texture **texture, Uint32 new_format, int new_width, int new_height, SDL_BlendMode blendmode, int init_texture)
+int realloc_texture(SDL_Texture **texture, Uint32 new_format, int new_width, int new_height, SDL_BlendMode blendmode, int init_texture)
 {
     Uint32 format;
     int access, w, h;
@@ -614,7 +618,7 @@ static int realloc_texture(SDL_Texture **texture, Uint32 new_format, int new_wid
     return 0;
 }
 
-static void calculate_display_rect(SDL_Rect *rect,
+void calculate_display_rect(SDL_Rect *rect,
                                    int scr_xleft, int scr_ytop, int scr_width, int scr_height,
                                    int pic_width, int pic_height, AVRational pic_sar)
 {
@@ -659,7 +663,7 @@ static void get_sdl_pix_fmt_and_blendmode(int format, Uint32 *sdl_pix_fmt, SDL_B
     }
 }
 
-static int upload_texture(SDL_Texture **tex, AVFrame *frame)
+int upload_texture(SDL_Texture **tex, AVFrame *frame)
 {
     int ret = 0;
     Uint32 sdl_pix_fmt;
@@ -699,7 +703,7 @@ static enum AVColorSpace sdl_supported_color_spaces[] = {
     AVCOL_SPC_SMPTE170M,
 };
 
-static void set_sdl_yuv_conversion_mode(AVFrame *frame)
+void set_sdl_yuv_conversion_mode(AVFrame *frame)
 {
 #if SDL_VERSION_ATLEAST(2,0,8)
     SDL_YUV_CONVERSION_MODE mode = SDL_YUV_CONVERSION_AUTOMATIC;
@@ -714,7 +718,7 @@ static void set_sdl_yuv_conversion_mode(AVFrame *frame)
     SDL_SetYUVConversionMode(mode); /* FIXME: no support for linear transfer */
 #endif
 }
-
+/*
 static void video_image_display(VideoState *is)
 {
     Frame *vp;
@@ -804,6 +808,7 @@ static void video_image_display(VideoState *is)
 #endif
     }
 }
+*/
 
 static inline int compute_mod(int a, int b)
 {
@@ -1045,7 +1050,7 @@ static void stream_close(VideoState *is)
     packet_queue_destroy(&is->subtitleq);
 
     /* free all pictures */
-    frame_queue_destroy(&is->pictq);
+    /*frame_queue_destroy(&is->pictq);*/
     frame_queue_destroy(&is->sampq);
     frame_queue_destroy(&is->subpq);
     SDL_DestroyCond(is->continue_read_thread);
@@ -1138,7 +1143,7 @@ void video_display(VideoState *is)
     if (is->audio_st && is->show_mode != SHOW_MODE_VIDEO)
         video_audio_display(is);
     else if (is->video_st)
-        video_image_display(is);
+        cpp_video_image_display(is);
     SDL_RenderPresent(renderer);
 }
 
@@ -1315,7 +1320,7 @@ static double compute_target_delay(double delay, VideoState *is)
 
     return delay;
 }
-*/
+
 double vp_duration(VideoState *is, Frame *vp, Frame *nextvp) {
     if (vp->serial == nextvp->serial) {
         double duration = nextvp->pts - vp->pts;
@@ -1327,13 +1332,12 @@ double vp_duration(VideoState *is, Frame *vp, Frame *nextvp) {
         return 0.0;
     }
 }
-/*
+
 static void update_video_pts(VideoState *is, double pts, int serial)
 {
     set_clock(&is->vidclk, pts, serial);
     sync_clock_to_slave(&is->extclk, &is->vidclk);
 }
-*/
 
 int queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial)
 {
@@ -1365,7 +1369,7 @@ int queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duratio
     frame_queue_push(&is->pictq);
     return 0;
 }
-/*
+
 int get_video_frame(VideoState *is, AVFrame *frame)
 {
     int got_picture;
@@ -2752,8 +2756,10 @@ static VideoState *stream_open(const char *filename,
     is->xleft   = 0;
 
     /* start video display */
+    /*
     if (video_frame_queue_init(&is->pictq, NULL, VIDEO_PICTURE_QUEUE_SIZE, 1) < 0)
         goto fail;
+        */
     if (frame_queue_init(&is->subpq, &is->subtitleq, SUBPICTURE_QUEUE_SIZE, 0) < 0)
         goto fail;
     if (frame_queue_init(&is->sampq, &is->audioq, SAMPLE_QUEUE_SIZE, 1) < 0)
@@ -3035,7 +3041,7 @@ int ffplay_event_loop(VideoState *cur_stream)
                     if (seek_by_bytes) {
                         pos = -1;
                         if (pos < 0 && cur_stream->video_stream >= 0)
-                            pos = cpp_frame_queue_last_pos(&cur_stream->pictq);
+                            pos = cpp_video_frame_queue_last_pos();
                         if (pos < 0 && cur_stream->audio_stream >= 0)
                             pos = frame_queue_last_pos(&cur_stream->sampq);
                         if (pos < 0)

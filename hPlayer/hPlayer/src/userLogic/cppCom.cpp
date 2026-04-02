@@ -5,25 +5,31 @@
 
 extern "C"
 {
-int64_t cpp_frame_queue_last_pos(FrameQueue *f)
+int64_t cpp_video_frame_queue_last_pos()
 {
     auto& rGlobal = tSingleton<globalData>::single();
     auto& rVidClk = rGlobal.vidClk;
-
-    Frame *fp = &f->queue[f->rindex];
-    if (f->rindex_shown && fp->serial == rVidClk.serial())
-        return fp->pos;
-    else
-        return -1;
+    auto& rPictQ = rGlobal.m_pictQ;
+    auto nRet = -1;
+    do {
+        if (!rPictQ.haveLastFrame()) {
+            break;
+        }
+        auto fp = rPictQ.lastFrame();
+        if (fp->serial != rVidClk.serial()) {
+            break;
+        }
+        nRet = fp->pos;
+    } while (0);
+    return nRet;
 }
 
-
-Frame* cpp_frame_queue_peek_writable(FrameQueue *f)
+/*
+cppFrame* cpp_frame_queue_peek_writable(FrameQueue *f)
 {
-    /* wait until we have space to put a new frame */
     SDL_LockMutex(f->mutex);
-    while (f->size >= f->max_size/* &&
-           !f->pktq->abort_request*/) {
+    while (f->size >= f->max_size &&
+           !f->pktq->abort_request) {
         SDL_CondWait(f->cond, f->mutex);
     }
     SDL_UnlockMutex(f->mutex);
@@ -35,6 +41,39 @@ Frame* cpp_frame_queue_peek_writable(FrameQueue *f)
     }
 
     return &f->queue[f->windex];
+}
+*/
+int cpp_queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial)
+{
+    cppFrame *vp = nullptr;
+    auto& rGlobal = tSingleton<globalData>::single();
+    auto& rPictQ = rGlobal.m_pictQ;
+#if defined(DEBUG_SYNC)
+    printf("frame_type=%c pts=%0.3f\n",
+           av_get_picture_type_char(src_frame->pict_type), pts);
+#endif
+
+    if (!(vp = rPictQ.nextWrite()))
+        return -1;
+
+    vp->sar = src_frame->sample_aspect_ratio;
+    vp->uploaded = 0;
+
+    vp->width = src_frame->width;
+    vp->height = src_frame->height;
+    vp->format = src_frame->format;
+
+    vp->pts = pts;
+    vp->duration = duration;
+    vp->pos = pos;
+    vp->serial = serial;
+
+    set_default_window_size(vp->width, vp->height, vp->sar);
+
+    av_frame_move_ref(vp->frame, src_frame);
+    // frame_queue_push(&is->pictq);
+    rPictQ.push();
+    return 0;
 }
 
 double cpp_get_master_clock(VideoState *is)
@@ -58,41 +97,10 @@ double cpp_get_master_clock(VideoState *is)
     return val;
 }
 
-double cpp_compute_target_delay(double delay, VideoState *is)
-{
-    double sync_threshold, diff = 0;
-    auto& rGlobal = tSingleton<globalData>::single();
-    auto& rVidClk = rGlobal.vidClk;
 
-    /* update delay to follow master synchronisation source */
-    if (get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER) {
-        /* if video is slave, we try to correct big delays by
-           duplicating or deleting a frame */
-        // diff = get_clock(&is->vidclk) - cpp_get_master_clock(is);
-        diff = rVidClk.getClock() - cpp_get_master_clock(is);
-
-        /* skip or repeat frame. We take into account the
-           delay to compute the threshold. I still don't know
-           if it is the best guess */
-        sync_threshold = FFMAX(AV_SYNC_THRESHOLD_MIN, FFMIN(AV_SYNC_THRESHOLD_MAX, delay));
-        if (!isnan(diff) && fabs(diff) < is->max_frame_duration) {
-            if (diff <= -sync_threshold)
-                delay = FFMAX(0, delay + diff);
-            else if (diff >= sync_threshold && delay > AV_SYNC_FRAMEDUP_THRESHOLD)
-                delay = delay + diff;
-            else if (diff >= sync_threshold)
-                delay = 2 * delay;
-        }
-    }
-
-    av_log(NULL, AV_LOG_TRACE, "video: delay=%0.3f A-V=%f\n",
-            delay, -diff);
-
-    return delay;
-}
 }
 
-globalData::globalData ():vidClk(vidPackQ)
+globalData::globalData ():vidClk(vidPackQ), m_pictQ(8, true)
 {
 }
 

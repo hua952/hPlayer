@@ -76,6 +76,12 @@ void  frameQue:: setPktq (packQue* v)
 {
     m_pktq = v;
 }
+
+bool  frameQue:: mabeNeetPush ()
+{
+    return que().mabeNeetPush ();
+}
+
 cppFrame*   frameQue:: lastFrame()
 {
     return que().front();

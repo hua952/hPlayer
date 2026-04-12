@@ -1,7 +1,9 @@
+#include <deque>
 extern "C"
 {
     #include "ffplayCom.h"
 }
+#include "cppCom.h"
 
 #include "logicWorker.h"
 
@@ -16,6 +18,7 @@ public:
         audioLogicState_willExit,
         audioLogicState_ok,
     };
+    using bufQue = std::deque<cppFrame>;
     audioDecUserLogic (audioDec& rServer);
 	int onLoopBegin() override;
 	int onLoopEnd() override;
@@ -25,7 +28,9 @@ public:
     void  setState(audioLogicState st);
     int  initThis();
     void  clean();
+    bufQue&  getBufQue ();
 private:
+    bufQue  m_bufQue;
     audioDec& m_raudioDec;
     AVFrame* m_frame {nullptr};
     audioLogicState  m_state{audioLogicState_readNotInit};

@@ -1,6 +1,5 @@
 #include "videoDec.h"
 #include "videoDecUserLogic.h"
-#include "tSingleton.h"
 #include "playerDataRpc.h"
 #include "cppCom.h"
 #include "tSingleton.h"
@@ -17,141 +16,10 @@ int videoDecUserLogic::onLoopBegin()
     return nRet;
 }
 
-static int cpp_packet_queue_get(packQue& rQ, AVPacket *pkt, int block, int *serial)
-{
-    int ret = 0;
-    /*
-       if (q->abort_request) {
-       ret = -1;
-       break;
-       }
-       */
-    do {
-        auto pF = rQ.front();
-        if (!pF) {
-            if (!block) {
-                ret = 0;
-                break;
-            }
-            while(!(pF = rQ.front()));
-        }
-
-        rQ.allPackSizeAdd (-pF->m_pkt->size);
-        rQ.allPackDurationAdd (-pF->m_pkt->duration);
-        av_packet_move_ref(pkt, pF->m_pkt);
-        if (serial) {
-            *serial = pF->m_serial;
-        }
-        rQ.pop();
-    } while (0);
-    return ret;
-}
 
 
-int cpp_decoder_decode_frame(cppDecoder& rD, AVFrame *frame, AVSubtitle *sub) {
-    int ret = AVERROR(EAGAIN);
 
-    for (;;) {
-        if (rD.queue->serial() == rD.pkt_serial) {
-            do {
-                /*
-                if (d->queue->abort_request)
-                    return -1;
-                */
-                switch (rD.avctx->codec_type) {
-                    case AVMEDIA_TYPE_VIDEO:
-                        ret = avcodec_receive_frame(rD.avctx, frame);
-                        if (ret >= 0) {
-                            if (decoder_reorder_pts == -1) {
-                                frame->pts = frame->best_effort_timestamp;
-                            } else if (!decoder_reorder_pts) {
-                                frame->pts = frame->pkt_dts;
-                            }
-                        }
-                        break;
-                    case AVMEDIA_TYPE_AUDIO:
-                        /*
-                        ret = avcodec_receive_frame(d->avctx, frame);
-                        if (ret >= 0) {
-                            AVRational tb = (AVRational){1, frame->sample_rate};
-                            if (frame->pts != AV_NOPTS_VALUE)
-                                frame->pts = av_rescale_q(frame->pts, d->avctx->pkt_timebase, tb);
-                            else if (d->next_pts != AV_NOPTS_VALUE)
-                                frame->pts = av_rescale_q(d->next_pts, d->next_pts_tb, tb);
-                            if (frame->pts != AV_NOPTS_VALUE) {
-                                d->next_pts = frame->pts + frame->nb_samples;
-                                d->next_pts_tb = tb;
-                            }
-                        }
-                        */
-                        break;
-                }
-                if (ret == AVERROR_EOF) {
-                    rD.finished = rD.pkt_serial;
-                    avcodec_flush_buffers(rD.avctx);
-                    return 0;
-                }
-                if (ret >= 0)
-                    return 1;
-            } while (ret != AVERROR(EAGAIN));
-        }
 
-        do {
-            /*
-            if (d->queue->nb_packets == 0)
-                SDL_CondSignal(d->empty_queue_cond);
-                */
-            if (rD.packet_pending) {
-                rD.packet_pending = 0;
-            } else {
-                int old_serial = rD.pkt_serial;
-                if (cpp_packet_queue_get(*rD.queue, rD.pkt, 1, &rD.pkt_serial) < 0)
-                    return -1;
-                if (old_serial != rD.pkt_serial) {
-                    avcodec_flush_buffers(rD.avctx);
-                    rD.finished = 0;
-                    rD.next_pts = rD.start_pts;
-                    rD.next_pts_tb = rD.start_pts_tb;
-                }
-            }
-            if (rD.queue->serial() == rD.pkt_serial)
-                break;
-            av_packet_unref(rD.pkt);
-        } while (1);
-
-        if (rD.avctx->codec_type == AVMEDIA_TYPE_SUBTITLE) {
-            int got_frame = 0;
-            ret = avcodec_decode_subtitle2(rD.avctx, sub, &got_frame, rD.pkt);
-            if (ret < 0) {
-                ret = AVERROR(EAGAIN);
-            } else {
-                if (got_frame && !rD.pkt->data) {
-                    rD.packet_pending = 1;
-                }
-                ret = got_frame ? 0 : (rD.pkt->data ? AVERROR(EAGAIN) : AVERROR_EOF);
-            }
-            av_packet_unref(rD.pkt);
-        } else {
-            if (rD.pkt->buf && !rD.pkt->opaque_ref) {
-                FrameData *fd;
-
-                rD.pkt->opaque_ref = av_buffer_allocz(sizeof(*fd));
-                if (!rD.pkt->opaque_ref)
-                    return AVERROR(ENOMEM);
-                fd = (FrameData*)rD.pkt->opaque_ref->data;
-                fd->pkt_pos = rD.pkt->pos;
-            }
-
-            if (avcodec_send_packet(rD.avctx, rD.pkt) == AVERROR(EAGAIN)) {
-                av_log(rD.avctx, AV_LOG_ERROR, "Receive_frame and send_packet both returned EAGAIN, which is an API violation.\n");
-                rD.packet_pending = 1;
-            } else {
-                av_packet_unref(rD.pkt);
-            }
-        }
-    }
-    return ret;
-}
 
 int   videoDecUserLogic:: initThis()
 {
@@ -246,7 +114,9 @@ int videoDecUserLogic::onLoopFrame()
             }
             setState(videoDecLogicState_ok);
         }
-
+        if (!rVidPackQ.mabeNeetPush()) {
+            break;
+        }
     // for (;;) {
         ret = cpp_get_video_frame(is, frame);
         if (ret < 0) {

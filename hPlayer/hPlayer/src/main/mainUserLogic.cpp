@@ -60,6 +60,8 @@ void cpp_stream_toggle_pause(VideoState *is)
     auto& rGlobal = tSingleton<globalData>::single();
     // auto& rVidPackQ = rGlobal.vidPackQ;
     auto& rVidClk = rGlobal.vidClk;
+    auto& rAudClk = rGlobal.m_audclk;
+
     if (is->paused) {
         // is->frame_timer += av_gettime_relative() / 1000000.0 - is->vidclk.last_updated;
         is->frame_timer += av_gettime_relative() / 1000000.0 - rVidClk.lastUpdated();
@@ -72,12 +74,11 @@ void cpp_stream_toggle_pause(VideoState *is)
     }
     //set_clock(&is->extclk, get_clock(&is->extclk), is->extclk.serial);
     set_clock(&is->extclk, get_clock(&is->extclk), is->extclk.serial);
-    is->paused = is->audclk.paused =  is->extclk.paused = !is->paused;
+    is->paused =  is->extclk.paused = !is->paused;
     rVidClk.setPaused(is->paused);
+    rAudClk.setPaused(is->paused);
 }
-
 }
-
 
 mainUserLogic::mainUserLogic (main& rServer):m_rmain(rServer)
 {
@@ -184,13 +185,6 @@ static double compute_target_delay(double delay, VideoState *is)
     return delay;
 }
 
-static void cpp_sync_clock_to_slave(Clock *c, cppClock &rSlave)
-{
-    double clock = get_clock(c);
-    double slave_clock = rSlave.getClock();
-    if (!isnan(slave_clock) && (isnan(clock) || fabs(clock - slave_clock) > AV_NOSYNC_THRESHOLD))
-        set_clock(c, slave_clock, rSlave.serial());
-}
 
 static void update_video_pts(VideoState *is, double pts, int serial)
 {
@@ -313,6 +307,8 @@ void cpp_video_refresh(void *opaque, double *remaining_time)
     auto& rVidPackQ = rGlobal.vidPackQ;
     auto& rVidClk = rGlobal.vidClk;
     auto& rPictQ  = rGlobal.m_pictQ;
+    auto& rAudioPackQ = rGlobal.m_audioPackQ;
+    auto& rAudClk = rGlobal.m_audclk;
 
     Frame *sp, *sp2;
 
@@ -452,7 +448,7 @@ display:
             vqsize = 0;
             sqsize = 0;
             if (is->audio_st)
-                aqsize = is->audioq.size;
+                aqsize = rAudioPackQ.size(); // is->audioq.size;
             if (is->video_st)
                 vqsize = rVidPackQ.size();
             if (is->subtitle_st)
@@ -460,14 +456,14 @@ display:
             av_diff = 0;
             if (is->audio_st && is->video_st) {
                 // av_diff = get_clock(&is->audclk) - get_clock(&is->vidclk);
-                av_diff = get_clock(&is->audclk) - rVidClk.getClock ();
+                av_diff = rAudClk.getClock () - rVidClk.getClock ();
             }
             else if (is->video_st) {
                 // av_diff = cpp_get_master_clock(is) - get_clock(&is->vidclk);
                 av_diff = cpp_get_master_clock(is) - rVidClk.getClock();
             }
             else if (is->audio_st)
-                av_diff = cpp_get_master_clock(is) - get_clock(&is->audclk);
+                av_diff = cpp_get_master_clock(is) - rAudClk.getClock ();
 
             av_bprint_init(&buf, 0, AV_BPRINT_SIZE_AUTOMATIC);
             av_bprintf(&buf,

@@ -190,15 +190,15 @@ typedef struct VideoState {
     AVFormatContext *ic;
     int realtime;
 
-    Clock audclk;
+    /*Clock audclk;*/
     /*Clock vidclk;*/
     Clock extclk;
 
     /*FrameQueue pictq;*/
     FrameQueue subpq;
-    FrameQueue sampq;
+    /*FrameQueue sampq;*/
 
-    Decoder auddec;
+    /*Decoder auddec;*/
     /*Decoder viddec;*/
     Decoder subdec;
 
@@ -213,7 +213,7 @@ typedef struct VideoState {
     double audio_diff_threshold;
     int audio_diff_avg_count;
     AVStream *audio_st;
-    PacketQueue audioq;
+    /*PacketQueue audioq;*/
     int audio_hw_buf_size;
     uint8_t *audio_buf;
     uint8_t *audio_buf1;
@@ -371,7 +371,7 @@ void packet_queue_start(PacketQueue *q);
 int decoder_start(Decoder *d, int (*fn)(void *), const char *thread_name, void* arg);
 int audio_thread(void *arg);
 int decoder_init(Decoder *d, AVCodecContext *avctx, PacketQueue *queue, SDL_cond *empty_queue_cond);
-int audio_open(void *opaque, AVChannelLayout *wanted_channel_layout, int wanted_sample_rate, struct AudioParams *audio_hw_params);
+/*int audio_open(void *opaque, AVChannelLayout *wanted_channel_layout, int wanted_sample_rate, struct AudioParams *audio_hw_params);*/
 int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format);
 int create_hwaccel(AVBufferRef **device_ctx);
 void set_default_window_size(int width, int height, AVRational sar);

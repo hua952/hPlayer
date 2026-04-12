@@ -35,9 +35,14 @@ struct globalData
 {
     globalData ();
     cppDecoder    vidDec;
+    cppDecoder    m_audDec;
     videoPackQue  vidPackQ;
+    packQue       m_audioPackQ;
     cppClock      vidClk;
+    cppClock      m_audclk;
+
     frameQue      m_pictQ;
+    frameQue      m_sampQ;
 };
 
 extern "C"
@@ -49,4 +54,8 @@ double cpp_get_master_clock(VideoState *is);
 // double cpp_compute_target_delay(double delay, VideoState *is);
 int cpp_queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial);
 }
+
+int cpp_decoder_decode_frame(cppDecoder& rD, AVFrame *frame, AVSubtitle *sub);
+void cpp_sync_clock_to_slave(Clock *c, cppClock &rSlave);
+
 #endif

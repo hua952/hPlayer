@@ -1,7 +1,7 @@
 #include "videoPackQue.h"
 #include "strFun.h"
 
-videoPackQue:: videoPackQue ():packQue(50)
+videoPackQue:: videoPackQue ():packQue(48)
 {
 }
 

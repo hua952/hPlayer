@@ -45,6 +45,7 @@ public:
     cppFrame*  curFrame();
     cppFrame*  nextFrame();
     cppFrame*  nextWrite();
+    bool mabeNeetPush ();
     void push();
     virtual  void  popFrame();
     SPSCQue&  que ();

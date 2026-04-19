@@ -1,4 +1,5 @@
 #include "logicWorker.h"
+#include "cppCom.h"
 
 extern "C"
 {

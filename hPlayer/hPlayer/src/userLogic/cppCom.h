@@ -36,13 +36,16 @@ struct globalData
     globalData ();
     cppDecoder    vidDec;
     cppDecoder    m_audDec;
+    cppDecoder    m_subDec;
     videoPackQue  vidPackQ;
     packQue       m_audioPackQ;
+    packQue       m_subPackQ;
     cppClock      vidClk;
     cppClock      m_audclk;
 
     frameQue      m_pictQ;
     frameQue      m_sampQ;
+    frameQue      m_subpQ;
 };
 
 extern "C"

@@ -1,5 +1,6 @@
 #include "subtitleqDec.h"
 #include "subtitleqDecUserLogic.h"
+#include "tSingleton.h"
 
 subtitleqDecUserLogic::subtitleqDecUserLogic (subtitleqDec& rServer):m_rsubtitleqDec(rServer)
 {
@@ -37,22 +38,35 @@ int subtitleqDecUserLogic::onLoopFrame()
             setState(subtitleqLogicState_ok);
         }
 
+        auto& rGlobal = tSingleton<globalData>::single();
+        auto& rDecoder = rGlobal.m_audDec;
+        auto& rSubDec = rGlobal.m_subDec;
+        auto& rSubpQ =  rGlobal.m_subpQ;
+
         VideoState *is = getVideoState ();
-    Frame *sp;
-    int got_subtitle;
-    double pts;
+        // Frame *sp;
+        int got_subtitle;
+        double pts;
+
+        if (!rSubpQ.mabeNeetPush()) {
+            break;
+        }
     auto funSendNeetMsg = [this]() {
             NeetExitNtfAskMsg msg;
             getServer().sendMsg(msg);
             setState(subtitleqLogicState_willExit);
         };
     // for (;;) {
+    /*
         if (!(sp = frame_queue_peek_writable(&is->subpq))) {
-            funSendNeetMsg ();
+            // funSendNeetMsg ();
             break;
         }
+        */
 
-        if ((got_subtitle = decoder_decode_frame(&is->subdec, NULL, &sp->sub)) < 0) {
+        auto sp = rSubpQ.nextWrite();
+        // if ((got_subtitle = decoder_decode_frame(&is->subdec, NULL, &sp->sub)) < 0) {
+        if ((got_subtitle = cpp_decoder_decode_frame(rSubDec, NULL, &sp->sub)) < 0) {
             funSendNeetMsg ();
             break;
         }
@@ -62,13 +76,14 @@ int subtitleqDecUserLogic::onLoopFrame()
             if (sp->sub.pts != AV_NOPTS_VALUE)
                 pts = sp->sub.pts / (double)AV_TIME_BASE;
             sp->pts = pts;
-            sp->serial = is->subdec.pkt_serial;
-            sp->width = is->subdec.avctx->width;
-            sp->height = is->subdec.avctx->height;
+            sp->serial = rSubDec.pkt_serial;
+            sp->width = rSubDec.avctx->width;
+            sp->height = rSubDec.avctx->height;
             sp->uploaded = 0;
 
             /* now we can update the picture count */
-            frame_queue_push(&is->subpq);
+            // frame_queue_push(&is->subpq);
+            rSubpQ.push();
         } else if (got_subtitle) {
             avsubtitle_free(&sp->sub);
         }

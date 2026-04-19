@@ -530,13 +530,15 @@ static int cpp_stream_component_open_base(VideoState *is, int stream_index, logi
         is->subtitle_stream = stream_index;
         is->subtitle_st = ic->streams[stream_index];
 
-        if ((ret = decoder_init(&is->subdec, avctx, &is->subtitleq, is->continue_read_thread)) < 0)
+        // if ((ret = decoder_init(&is->subdec, avctx, &is->subtitleq, is->continue_read_thread)) < 0)
+        if ((ret = cpp_decoder_init(rGlobal.m_subDec, avctx, &rGlobal.m_subPackQ)) < 0)
             goto fail;
         /*
         if ((ret = decoder_start(&is->subdec, subtitle_thread, "subtitle_decoder", is)) < 0)
             goto out;
         */
-        packet_queue_start(is->subdec.queue);
+        // packet_queue_start(is->subdec.queue);
+        rGlobal.m_subPackQ.start();
         {
             subtitleqAskMsg msg;
             rWork.sendMsg(msg);
@@ -703,20 +705,24 @@ static int stream_component_open_base(VideoState *is, int stream_index, logicWor
         */
         break;
     case AVMEDIA_TYPE_SUBTITLE:
+        /*
         is->subtitle_stream = stream_index;
         is->subtitle_st = ic->streams[stream_index];
 
         if ((ret = decoder_init(&is->subdec, avctx, &is->subtitleq, is->continue_read_thread)) < 0)
             goto fail;
+            */
         /*
         if ((ret = decoder_start(&is->subdec, subtitle_thread, "subtitle_decoder", is)) < 0)
             goto out;
         */
+        /*
         packet_queue_start(is->subdec.queue);
         {
             subtitleqAskMsg msg;
             rWork.sendMsg(msg);
         }
+        */
         break;
     default:
         break;
@@ -768,6 +774,7 @@ int decoThUserLogic::onLoopFrame()
     auto& rAudDec = rGlobal.m_audDec;
     auto& rPictQ = rGlobal.m_pictQ;
     auto& rSampQ = rGlobal.m_sampQ;
+    auto& rSubPackQ = rGlobal.m_subPackQ;
     auto& rAudioPackQ = rGlobal.m_audioPackQ;
 
     do {
@@ -827,8 +834,10 @@ int decoThUserLogic::onLoopFrame()
                     rAudioPackQ.cleanForSeek();
                     // packet_queue_flush(&is->audioq);
                 }
-                if (is->subtitle_stream >= 0)
-                    packet_queue_flush(&is->subtitleq);
+                if (is->subtitle_stream >= 0) {
+                    rSubPackQ.cleanForSeek();
+                    // packet_queue_flush(&is->subtitleq);
+                }
                 if (is->video_stream >= 0) {
                     rVidPackQ.cleanForSeek();
                     // packet_queue_flush(&is->videoq);
@@ -867,12 +876,13 @@ int decoThUserLogic::onLoopFrame()
 
         /* if the queue are full, no need to read more */
         if (infinite_buffer<1 &&
-              (rAudioPackQ.size() + rVidPackQ.size() + is->subtitleq.size > MAX_QUEUE_SIZE
+              (rAudioPackQ.size() + rVidPackQ.size() + rSubPackQ.size() > MAX_QUEUE_SIZE
             // || (stream_has_enough_packets(is->audio_st, is->audio_stream, &is->audioq) &&
             || (!rAudioPackQ.mabeNeetPush()  &&
                 // stream_has_enough_packets(is->video_st, is->video_stream, &is->videoq) &&
                 !rVidPackQ.mabeNeetPush () &&
-                stream_has_enough_packets(is->subtitle_st, is->subtitle_stream, &is->subtitleq)))) {
+                // stream_has_enough_packets(is->subtitle_st, is->subtitle_stream, &is->subtitleq)))) {
+                !rSubPackQ.mabeNeetPush ()))) {
             /* wait 10 ms */
             
             // SDL_LockMutex(wait_mutex);
@@ -923,8 +933,15 @@ int decoThUserLogic::onLoopFrame()
                     }
                     // packet_queue_put_nullpacket(&is->audioq, pkt, is->audio_stream);
                 }
-                if (is->subtitle_stream >= 0)
-                    packet_queue_put_nullpacket(&is->subtitleq, pkt, is->subtitle_stream);
+                if (is->subtitle_stream >= 0) {
+                    pkt->stream_index = is->subtitle_stream ;
+                    rSubPackQ.pushImportant(pkt);
+                    bC = rSubPackQ.procLastUnpushPack();
+                    if (!bC) {
+                        break;
+                    }
+                    // packet_queue_put_nullpacket(&is->subtitleq, pkt, is->subtitle_stream);
+                }
                 is->eof = 1;
             }
             if (ic->pb && ic->pb->error) {
@@ -962,7 +979,8 @@ int decoThUserLogic::onLoopFrame()
             // packet_queue_put(&is->videoq, pkt);
             rVidPackQ.pushPack (pkt);
         } else if (pkt->stream_index == is->subtitle_stream && pkt_in_play_range) {
-            packet_queue_put(&is->subtitleq, pkt);
+            // packet_queue_put(&is->subtitleq, pkt);
+            rSubPackQ.pushPack (pkt);
         } else {
             av_packet_unref(pkt);
         }
@@ -1250,9 +1268,17 @@ void   decoThUserLogic:: sendEmptyAudioPack()
 }
 void     decoThUserLogic:: sendEmptySubtitleqPack()
 {
+    auto& rGlobal = tSingleton<globalData>::single();
+    auto& rSubPackQ = rGlobal.m_subPackQ;
+    auto pkt = av_packet_alloc();
+    auto is = getVideoState();
+    pkt->stream_index = is->subtitle_stream;
+    rSubPackQ.pushImportant(pkt);
+    /*
     auto pkt = av_packet_alloc();
     VideoState *is = getVideoState();
     packet_queue_put_nullpacket(&is->subtitleq, pkt, is->subtitle_stream);
+    */
 }
 
 void cpp_decoder_destroy(cppDecoder& rD)

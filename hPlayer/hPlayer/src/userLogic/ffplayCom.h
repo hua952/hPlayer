@@ -195,12 +195,12 @@ typedef struct VideoState {
     Clock extclk;
 
     /*FrameQueue pictq;*/
-    FrameQueue subpq;
+    /*FrameQueue subpq;*/
     /*FrameQueue sampq;*/
 
     /*Decoder auddec;*/
     /*Decoder viddec;*/
-    Decoder subdec;
+    /*Decoder subdec;*/
 
     int audio_stream;
 
@@ -249,7 +249,7 @@ typedef struct VideoState {
 
     int subtitle_stream;
     AVStream *subtitle_st;
-    PacketQueue subtitleq;
+    /*PacketQueue subtitleq;*/
 
     double frame_timer;
     double frame_last_returned_time;

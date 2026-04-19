@@ -254,7 +254,7 @@ int cpp_decoder_decode_frame(cppDecoder& rD, AVFrame *frame, AVSubtitle *sub)
     return ret;
 }
 
-globalData::globalData ():m_audioPackQ(64), vidClk(vidPackQ), m_audclk(m_audioPackQ),m_pictQ(16, true),m_sampQ(32 * 1, true)
+globalData::globalData ():m_audioPackQ(64), m_subPackQ(10), vidClk(vidPackQ), m_audclk(m_audioPackQ),m_pictQ(16, true), m_sampQ(32 * 1, true), m_subpQ(8, false)
 {
 }
 

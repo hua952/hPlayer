@@ -1004,8 +1004,10 @@ static void stream_component_close(VideoState *is, int stream_index)
         }
         break;
     case AVMEDIA_TYPE_SUBTITLE:
+        /*
         decoder_abort(&is->subdec, &is->subpq);
         decoder_destroy(&is->subdec);
+        */
         break;
     default:
         break;
@@ -1048,12 +1050,12 @@ static void stream_close(VideoState *is)
 
     /* packet_queue_destroy(&is->videoq); */
     /*packet_queue_destroy(&is->audioq);*/
-    packet_queue_destroy(&is->subtitleq);
+    /*packet_queue_destroy(&is->subtitleq);*/
 
     /* free all pictures */
     /*frame_queue_destroy(&is->pictq);
-    frame_queue_destroy(&is->sampq);*/
-    frame_queue_destroy(&is->subpq);
+    frame_queue_destroy(&is->sampq);
+    frame_queue_destroy(&is->subpq);*/
     SDL_DestroyCond(is->continue_read_thread);
     sws_freeContext(is->sub_convert_ctx);
     av_free(is->filename);
@@ -2465,17 +2467,20 @@ static VideoState *stream_open(const char *filename,
     if (video_frame_queue_init(&is->pictq, NULL, VIDEO_PICTURE_QUEUE_SIZE, 1) < 0)
         goto fail;
         */
+    /*
     if (frame_queue_init(&is->subpq, &is->subtitleq, SUBPICTURE_QUEUE_SIZE, 0) < 0)
         goto fail;
+    */
     /*
     if (frame_queue_init(&is->sampq, &is->audioq, SAMPLE_QUEUE_SIZE, 1) < 0)
         goto fail;
     */
-    if (/*packet_queue_init(&is->videoq) < 0 ||
-        packet_queue_init(&is->audioq) < 0 ||*/
+/*
+    if (packet_queue_init(&is->videoq) < 0 ||
+        packet_queue_init(&is->audioq) < 0 ||
         packet_queue_init(&is->subtitleq) < 0)
         goto fail;
-
+*/
     if (!(is->continue_read_thread = SDL_CreateCond())) {
         av_log(NULL, AV_LOG_FATAL, "SDL_CreateCond(): %s\n", SDL_GetError());
         goto fail;

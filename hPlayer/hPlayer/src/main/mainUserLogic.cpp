@@ -200,9 +200,9 @@ extern "C"
 void cpp_video_image_display(VideoState *is)
 {
     // Frame *vp;
-    Frame *sp = NULL;
+    // Frame *sp = NULL;
     cppFrame *vp;
-    // cppFrame *sp = NULL;
+    cppFrame *sp = NULL;
 
     SDL_Rect rect;
 
@@ -211,6 +211,7 @@ void cpp_video_image_display(VideoState *is)
     // auto& rVidPackQ = rGlobal.vidPackQ;
     // auto& rVidClk = rGlobal.vidClk;
     auto& rPictQ  = rGlobal.m_pictQ;
+    auto& rSubpQ =  rGlobal.m_subpQ;
 
     // vp = frame_queue_peek_last(&is->pictq);
     vp = rPictQ.lastFrame();
@@ -220,9 +221,10 @@ void cpp_video_image_display(VideoState *is)
     }
 
     if (is->subtitle_st) {
-        if (frame_queue_nb_remaining(&is->subpq) > 0) {
-            sp = frame_queue_peek(&is->subpq);
-
+        // if (frame_queue_nb_remaining(&is->subpq) > 0) {
+        if (rSubpQ.size() > 0) {
+            // sp = frame_queue_peek(&is->subpq);
+            sp = rSubpQ.lastFrame();
             if (vp->pts >= sp->pts + ((float) sp->sub.start_display_time / 1000)) {
                 if (!sp->uploaded) {
                     uint8_t* pixels[4];
@@ -261,6 +263,7 @@ void cpp_video_image_display(VideoState *is)
                 }
             } else
                 sp = NULL;
+            rSubpQ.popFrame();
         }
     }
 
@@ -307,10 +310,12 @@ void cpp_video_refresh(void *opaque, double *remaining_time)
     auto& rVidPackQ = rGlobal.vidPackQ;
     auto& rVidClk = rGlobal.vidClk;
     auto& rPictQ  = rGlobal.m_pictQ;
+    auto& rSubpQ =  rGlobal.m_subpQ;
     auto& rAudioPackQ = rGlobal.m_audioPackQ;
     auto& rAudClk = rGlobal.m_audclk;
+    auto& rSubPackQ = rGlobal.m_subPackQ;
 
-    Frame *sp, *sp2;
+    cppFrame *sp, *sp2;
 
     if (!is->paused && get_master_sync_type(is) == AV_SYNC_EXTERNAL_CLOCK && is->realtime) {
         /*check_external_clock_speed(is);*/
@@ -386,15 +391,17 @@ retry:
             }
 
             if (is->subtitle_st) {
-                while (frame_queue_nb_remaining(&is->subpq) > 0) {
-                    sp = frame_queue_peek(&is->subpq);
-
-                    if (frame_queue_nb_remaining(&is->subpq) > 1)
+                // while (frame_queue_nb_remaining(&is->subpq) > 0) {
+                while (rSubpQ.size() > 0) {
+                    // sp = frame_queue_peek(&is->subpq);
+                    sp = rSubpQ.curFrame ();
+                    /*if (frame_queue_nb_remaining(&is->subpq) > 1)
                         sp2 = frame_queue_peek_next(&is->subpq);
                     else
-                        sp2 = NULL;
+                        sp2 = NULL;*/
+                    sp2 = rSubpQ.nextFrame();
 
-                    if (sp->serial != is->subtitleq.serial
+                    if (sp->serial != rSubPackQ.serial()
                             // || (is->vidclk.pts > (sp->pts + ((float) sp->sub.end_display_time / 1000)))
                             // || (sp2 && is->vidclk.pts > (sp2->pts + ((float) sp2->sub.start_display_time / 1000))))
                             || (rVidClk.pts() > (sp->pts + ((float) sp->sub.end_display_time / 1000)))
@@ -414,7 +421,8 @@ retry:
                                 }
                             }
                         }
-                        frame_queue_next(&is->subpq);
+                        // frame_queue_next(&is->subpq);
+                        rSubpQ.popFrame();
                     } else {
                         break;
                     }
@@ -452,7 +460,7 @@ display:
             if (is->video_st)
                 vqsize = rVidPackQ.size();
             if (is->subtitle_st)
-                sqsize = is->subtitleq.size;
+                sqsize = rSubPackQ.size();
             av_diff = 0;
             if (is->audio_st && is->video_st) {
                 // av_diff = get_clock(&is->audclk) - get_clock(&is->vidclk);

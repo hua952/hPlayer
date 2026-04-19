@@ -85,18 +85,7 @@ typedef struct MyAVPacketList {
     AVPacket *pkt;
     int serial;
 } MyAVPacketList;
-/*
-typedef struct PacketQueue {
-    AVFifo *pkt_list;
-    int nb_packets;
-    int size;
-    int64_t duration;
-    int abort_request;
-    int serial;
-    SDL_mutex *mutex;
-    SDL_cond *cond;
-} PacketQueue;
-*/
+
 #define VIDEO_PICTURE_QUEUE_SIZE 3
 #define SUBPICTURE_QUEUE_SIZE 16
 #define SAMPLE_QUEUE_SIZE 9
@@ -124,59 +113,15 @@ typedef struct FrameData {
     int64_t pkt_pos;
 } FrameData;
 
-/*
-typedef struct Frame {
-    AVFrame *frame;
-    AVSubtitle sub;
-    int serial;
-    double pts;
-    double duration;
-    int64_t pos;
-    int width;
-    int height;
-    int format;
-    AVRational sar;
-    int uploaded;
-    int flip_v;
-} Frame;
-typedef struct FrameQueue {
-    Frame queue[FRAME_QUEUE_SIZE];
-    int rindex;
-    int windex;
-    int size;
-    int max_size;
-    int keep_last;
-    int rindex_shown;
-    SDL_mutex *mutex;
-    SDL_cond *cond;
-    PacketQueue *pktq;
-} FrameQueue;
-*/
+
 enum {
     AV_SYNC_AUDIO_MASTER, /* default choice */
     AV_SYNC_VIDEO_MASTER,
     AV_SYNC_EXTERNAL_CLOCK, /* synchronize to an external clock */
 };
-/*
-typedef struct Decoder {
-    AVPacket *pkt;
-    PacketQueue *queue;
-    AVCodecContext *avctx;
-    int pkt_serial;
-    int finished;
-    int packet_pending;
-    SDL_cond *empty_queue_cond;
-    int64_t start_pts;
-    AVRational start_pts_tb;
-    int64_t next_pts;
-    AVRational next_pts_tb;
-    SDL_Thread *decoder_tid;
-} Decoder;
-*/
+
 typedef struct VideoState {
-    /*SDL_Thread *read_tid;*/
     const AVInputFormat *iformat;
-    /*int abort_request;*/
     int force_refresh;
     int paused;
     int last_paused;
@@ -189,17 +134,6 @@ typedef struct VideoState {
     AVFormatContext *ic;
     int realtime;
 
-    /*Clock audclk;*/
-    /*Clock vidclk;*/
-    /*Clock extclk;*/
-
-    /*FrameQueue pictq;*/
-    /*FrameQueue subpq;*/
-    /*FrameQueue sampq;*/
-
-    /*Decoder auddec;*/
-    /*Decoder viddec;*/
-    /*Decoder subdec;*/
 
     int audio_stream;
 
@@ -212,7 +146,6 @@ typedef struct VideoState {
     double audio_diff_threshold;
     int audio_diff_avg_count;
     AVStream *audio_st;
-    /*PacketQueue audioq;*/
     int audio_hw_buf_size;
     uint8_t *audio_buf;
     uint8_t *audio_buf1;
@@ -248,14 +181,12 @@ typedef struct VideoState {
 
     int subtitle_stream;
     AVStream *subtitle_st;
-    /*PacketQueue subtitleq;*/
 
     double frame_timer;
     double frame_last_returned_time;
     double frame_last_filter_delay;
     int video_stream;
     AVStream *video_st;
-    /* PacketQueue videoq; */
     double max_frame_duration;      // maximum duration of a frame - above this, we consider the jump a timestamp discontinuity
     struct SwsContext *sub_convert_ctx;
     int eof;
@@ -272,8 +203,6 @@ typedef struct VideoState {
     AVFilterGraph *agraph;              // audio filter graph
 
     int last_video_stream, last_audio_stream, last_subtitle_stream;
-
-    // SDL_cond *continue_read_thread;
 } VideoState;
 
 extern const AVInputFormat *file_iformat;
@@ -349,52 +278,24 @@ int ffplayMain(int argc, char **argv);
 VideoState* getVideoState();
 void do_exit(VideoState *is);
 void step_to_next_frame(VideoState *is);
-/*int stream_component_open(VideoState *is, int stream_index);*/
-/*void packet_queue_flush(PacketQueue *q);
-void set_clock_at(Clock *c, double pts, int serial, double time);
-void set_clock(Clock *c, double pts, int serial);
-int packet_queue_put(PacketQueue *q, AVPacket *pkt);
-int packet_queue_put_nullpacket(PacketQueue *q, AVPacket *pkt, int stream_index);
-int stream_has_enough_packets(AVStream *st, int stream_id, PacketQueue *queue);
 
-void frame_queue_push(FrameQueue *f);
-Frame *frame_queue_peek_writable(FrameQueue *f);
-*/
 int cmp_audio_fmts(enum AVSampleFormat fmt1, int64_t channel_count1,
                    enum AVSampleFormat fmt2, int64_t channel_count2);
-/*int decoder_decode_frame(Decoder *d, AVFrame *frame, AVSubtitle *sub);
-int queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial);*/
 int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame);
 int get_video_frame(VideoState *is, AVFrame *frame);
-/*
-int subtitle_thread(void *arg);
-void packet_queue_start(PacketQueue *q);
-int decoder_start(Decoder *d, int (*fn)(void *), const char *thread_name, void* arg);
-int audio_thread(void *arg);
-int decoder_init(Decoder *d, AVCodecContext *avctx, PacketQueue *queue, SDL_cond *empty_queue_cond);
-int audio_open(void *opaque, AVChannelLayout *wanted_channel_layout, int wanted_sample_rate, struct AudioParams *audio_hw_params);*/
+
 int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format);
 int create_hwaccel(AVBufferRef **device_ctx);
 void set_default_window_size(int width, int height, AVRational sar);
 int is_realtime(AVFormatContext *s);
-/*int decode_interrupt_cb(void *ctx);*/
 void stream_seek(VideoState *is, int64_t pos, int64_t rel, int by_bytes);
-/*int frame_queue_nb_remaining(FrameQueue *f);
-void set_clock_speed(Clock *c, double speed);*/
 int get_master_sync_type(VideoState *is);
 double get_clock(Clock *c);
 void video_display(VideoState *is);
-/*
-Frame *frame_queue_peek_last(FrameQueue *f);
-Frame *frame_queue_peek(FrameQueue *f);
-void frame_queue_next(FrameQueue *f);
-*/
 void calculate_display_rect(SDL_Rect *rect,
                                    int scr_xleft, int scr_ytop, int scr_width, int scr_height,
                                    int pic_width, int pic_height, AVRational pic_sar);
 void set_sdl_yuv_conversion_mode(AVFrame *frame);
 int upload_texture(SDL_Texture **tex, AVFrame *frame);
 int realloc_texture(SDL_Texture **texture, Uint32 new_format, int new_width, int new_height, SDL_BlendMode blendmode, int init_texture);
-/*Frame *frame_queue_peek_next(FrameQueue *f);*/
-/*double vp_duration(VideoState *is, Frame *vp, Frame *nextvp);*/
 #endif

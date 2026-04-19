@@ -35,7 +35,7 @@ private:
     decoTh& m_rdecoTh;
     readState  m_readState {readState_mainNotInit};
     AVFormatContext* m_ic = nullptr;
-    SDL_mutex* m_wait_mutex= nullptr;
+    // SDL_mutex* m_wait_mutex= nullptr;
     AVPacket* m_pkt = nullptr;
     int        m_ret = 0;
 };

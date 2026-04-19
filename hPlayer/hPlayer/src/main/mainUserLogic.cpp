@@ -61,6 +61,7 @@ void cpp_stream_toggle_pause(VideoState *is)
     // auto& rVidPackQ = rGlobal.vidPackQ;
     auto& rVidClk = rGlobal.vidClk;
     auto& rAudClk = rGlobal.m_audclk;
+    auto& rExtclk = rGlobal.m_extclk;
 
     if (is->paused) {
         // is->frame_timer += av_gettime_relative() / 1000000.0 - is->vidclk.last_updated;
@@ -73,10 +74,11 @@ void cpp_stream_toggle_pause(VideoState *is)
         rVidClk.setClock(rVidClk.getClock(), rVidClk.serial());
     }
     //set_clock(&is->extclk, get_clock(&is->extclk), is->extclk.serial);
-    set_clock(&is->extclk, get_clock(&is->extclk), is->extclk.serial);
-    is->paused =  is->extclk.paused = !is->paused;
+    rExtclk.setClock(rExtclk.getClock(), rExtclk.serial());
+    is->paused =  !is->paused;
     rVidClk.setPaused(is->paused);
     rAudClk.setPaused(is->paused);
+    rExtclk.setPaused(is->paused);
 }
 }
 
@@ -191,8 +193,10 @@ static void update_video_pts(VideoState *is, double pts, int serial)
     /* update current video pts */
     auto& rGlobal = tSingleton<globalData>::single();
     auto& rVidClk = rGlobal.vidClk;
+    auto& rExtclk = rGlobal.m_extclk;
+
     rVidClk.setClock(pts, serial);
-    cpp_sync_clock_to_slave(&is->extclk, rVidClk);
+    cpp_sync_clock_to_slave(rExtclk, rVidClk);
 }
 
 extern "C"

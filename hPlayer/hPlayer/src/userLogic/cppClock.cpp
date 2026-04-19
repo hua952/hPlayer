@@ -8,9 +8,9 @@ extern "C"
 }
 
 
-cppClock:: cppClock (packQue& q):m_packQ(q)
+cppClock:: cppClock (packQue* q):m_packQ(q)
 {
-    speed = 1.0;
+    m_speed = 1.0;
     m_paused = 0;
 
     setClock(NAN, -1);
@@ -37,6 +37,17 @@ void  cppClock:: setClock(double pts, int serial)
     setClockAt(pts, serial, time);
 }
 
+void  cppClock:: setClockSpeed(double speed)
+{
+    setClock(getClock(), serial ());
+    m_speed = speed;
+}
+
+double  cppClock:: speed()
+{
+    return m_speed;
+}
+
 double   cppClock:: pts ()
 {
     return m_aPts.load(std::memory_order_relaxed);
@@ -60,13 +71,13 @@ void  cppClock:: setClockAt(double pts, int serial, double time)
 double  cppClock:: getClock()
 {
     auto aSer = m_aSerial.load(std::memory_order_acquire);
-    if (m_packQ.serial() != aSer)
+    if (m_packQ && m_packQ->serial() != aSer)
         return NAN;
     if (m_paused) {
         return pts();
     } else {
         double time = av_gettime_relative() / 1000000.0;
-        return pts_drift + time - (time - m_lastUpdated) * (1.0 - speed);
+        return pts_drift + time - (time - m_lastUpdated) * (1.0 - speed());
     }
 }
 

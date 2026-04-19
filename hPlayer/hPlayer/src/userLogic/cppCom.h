@@ -42,7 +42,7 @@ struct globalData
     packQue       m_subPackQ;
     cppClock      vidClk;
     cppClock      m_audclk;
-
+    cppClock      m_extclk;
     frameQue      m_pictQ;
     frameQue      m_sampQ;
     frameQue      m_subpQ;
@@ -59,6 +59,6 @@ int cpp_queue_picture(VideoState *is, AVFrame *src_frame, double pts, double dur
 }
 
 int cpp_decoder_decode_frame(cppDecoder& rD, AVFrame *frame, AVSubtitle *sub);
-void cpp_sync_clock_to_slave(Clock *c, cppClock &rSlave);
+void cpp_sync_clock_to_slave(cppClock&c, cppClock &rSlave);
 
 #endif

@@ -6,10 +6,11 @@ class packQue;
 class cppClock
 {
 public:
-    cppClock (packQue& q);
+    cppClock (packQue* q);
     ~cppClock ();
     void setClock(double pts, int serial);
     void setClockAt(double pts, int serial, double time);
+    void setClockSpeed(double speed);
     double getClock();
     int  serial ();
     void  setSerial (int v);
@@ -19,11 +20,12 @@ public:
     void    setLastUpdated (double v);
     int  paused ();
     void  setPaused (int v);
+    double speed();
 private:
     double  m_lastUpdated;
     double pts_drift;     /* clock base minus time at which we updated the clock */
     double last_updated;
-    double speed;
+    double m_speed;
     // double  m_pts;
     // int  m_serial;
 
@@ -32,6 +34,6 @@ private:
     // int *queue_serial;    /* pointer to the current packet queue serial, used for obsolete clock detection */
 
     int  m_paused;
-    packQue&  m_packQ;
+    packQue*  m_packQ;
 };
 #endif

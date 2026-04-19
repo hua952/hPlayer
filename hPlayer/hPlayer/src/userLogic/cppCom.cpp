@@ -102,6 +102,7 @@ double cpp_get_master_clock(VideoState *is)
     auto& rGlobal = tSingleton<globalData>::single();
     auto& rVidClk = rGlobal.vidClk;
     auto& rAudClk = rGlobal.m_audclk;
+    auto& rExtclk = rGlobal.m_extclk;
 
     switch (get_master_sync_type(is)) {
         case AV_SYNC_VIDEO_MASTER:
@@ -111,7 +112,7 @@ double cpp_get_master_clock(VideoState *is)
             val = rAudClk.getClock();
             break;
         default:
-            val = get_clock(&is->extclk);
+            val = rExtclk.getClock();
             break;
     }
     return val;
@@ -254,14 +255,15 @@ int cpp_decoder_decode_frame(cppDecoder& rD, AVFrame *frame, AVSubtitle *sub)
     return ret;
 }
 
-globalData::globalData ():m_audioPackQ(64), m_subPackQ(10), vidClk(vidPackQ), m_audclk(m_audioPackQ),m_pictQ(16, true), m_sampQ(32 * 1, true), m_subpQ(8, false)
+globalData::globalData ():m_audioPackQ(64), m_subPackQ(10), vidClk(&vidPackQ), m_audclk(&m_audioPackQ),m_extclk(nullptr), m_pictQ(16, true), m_sampQ(32 * 1, true), m_subpQ(8, false)
 {
 }
 
-void cpp_sync_clock_to_slave(Clock *c, cppClock &rSlave)
+void cpp_sync_clock_to_slave(cppClock& c, cppClock &rSlave)
 {
-    double clock = get_clock(c);
+    double clock = c.getClock ();
     double slave_clock = rSlave.getClock();
     if (!isnan(slave_clock) && (isnan(clock) || fabs(clock - slave_clock) > AV_NOSYNC_THRESHOLD))
-        set_clock(c, slave_clock, rSlave.serial());
+        // set_clock(c, slave_clock, rSlave.serial());
+        c.setClock(slave_clock, rSlave.serial());
 }

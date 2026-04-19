@@ -12,19 +12,24 @@ void cpp_check_external_clock_speed(VideoState *is) {
     auto& rGlobal = tSingleton<globalData>::single();
     auto& rVidPackQ = rGlobal.vidPackQ;
     auto& rAudioPackQ = rGlobal.m_audioPackQ;
+    auto& rExtclk = rGlobal.m_extclk;
     auto vSize = rVidPackQ.size();
     auto aSize = rAudioPackQ.size();
    if (is->video_stream >= 0 && vSize <= EXTERNAL_CLOCK_MIN_FRAMES ||
        // is->audio_stream >= 0 && is->audioq.nb_packets <= EXTERNAL_CLOCK_MIN_FRAMES) {
        is->audio_stream >= 0 && aSize <= EXTERNAL_CLOCK_MIN_FRAMES) {
-       set_clock_speed(&is->extclk, FFMAX(EXTERNAL_CLOCK_SPEED_MIN, is->extclk.speed - EXTERNAL_CLOCK_SPEED_STEP));
+       // set_clock_speed(&is->extclk, FFMAX(EXTERNAL_CLOCK_SPEED_MIN, is->extclk.speed - EXTERNAL_CLOCK_SPEED_STEP));
+       rExtclk.setClockSpeed(FFMAX(EXTERNAL_CLOCK_SPEED_MIN, rExtclk.speed() - EXTERNAL_CLOCK_SPEED_STEP));
    } else if ((is->video_stream < 0 || vSize > EXTERNAL_CLOCK_MAX_FRAMES) &&
               (is->audio_stream < 0 || aSize > EXTERNAL_CLOCK_MAX_FRAMES)) {
-       set_clock_speed(&is->extclk, FFMIN(EXTERNAL_CLOCK_SPEED_MAX, is->extclk.speed + EXTERNAL_CLOCK_SPEED_STEP));
+       // set_clock_speed(&is->extclk, FFMIN(EXTERNAL_CLOCK_SPEED_MAX, is->extclk.speed + EXTERNAL_CLOCK_SPEED_STEP));
+       rExtclk.setClockSpeed(FFMIN(EXTERNAL_CLOCK_SPEED_MAX, rExtclk.speed() + EXTERNAL_CLOCK_SPEED_STEP));
    } else {
-       double speed = is->extclk.speed;
-       if (speed != 1.0)
-           set_clock_speed(&is->extclk, speed + EXTERNAL_CLOCK_SPEED_STEP * (1.0 - speed) / fabs(1.0 - speed));
+       double speed = rExtclk.speed();
+       if (speed != 1.0) {
+           // set_clock_speed(&is->extclk, speed + EXTERNAL_CLOCK_SPEED_STEP * (1.0 - speed) / fabs(1.0 - speed));
+           rExtclk.setClockSpeed(speed + EXTERNAL_CLOCK_SPEED_STEP * (1.0 - speed) / fabs(1.0 - speed));
+       }
    }
 }
 
@@ -245,6 +250,7 @@ static void sdl_audio_callback(void *opaque, Uint8 *stream, int len)
 {
     auto& rGlobal = tSingleton<globalData>::single();
     auto& rAudClk = rGlobal.m_audclk;
+    auto& rExtclk = rGlobal.m_extclk;
 
     VideoState *is = (VideoState*)opaque;
     int audio_size, len1;
@@ -285,7 +291,7 @@ static void sdl_audio_callback(void *opaque, Uint8 *stream, int len)
         // set_clock_at(&is->audclk, is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / is->audio_tgt.bytes_per_sec, is->audio_clock_serial, audio_callback_time / 1000000.0);
         // sync_clock_to_slave(&is->extclk, &is->audclk);
         rAudClk.setClockAt(is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / is->audio_tgt.bytes_per_sec, is->audio_clock_serial, audio_callback_time / 1000000.0);
-        cpp_sync_clock_to_slave(&is->extclk, rAudClk);
+        cpp_sync_clock_to_slave(rExtclk, rAudClk);
     }
 }
 
@@ -776,6 +782,7 @@ int decoThUserLogic::onLoopFrame()
     auto& rSampQ = rGlobal.m_sampQ;
     auto& rSubPackQ = rGlobal.m_subPackQ;
     auto& rAudioPackQ = rGlobal.m_audioPackQ;
+    auto& rExtclk = rGlobal.m_extclk;
 
     do {
         auto thisState = state ();
@@ -793,14 +800,16 @@ int decoThUserLogic::onLoopFrame()
         auto& ic = m_ic;
         int& ret = m_ret;
         auto& pkt = m_pkt;
-        auto&  wait_mutex = m_wait_mutex;
+        // auto&  wait_mutex = m_wait_mutex;
 
     // for (;;) {
+        /*
         if (is->abort_request) [[unlikely]] {
             gInfo("is->abort_request will Exit");
             sendExitNtfToSub();
             break;
         }
+        */
         if (is->paused != is->last_paused) {
             is->last_paused = is->paused;
             if (is->paused)
@@ -843,9 +852,11 @@ int decoThUserLogic::onLoopFrame()
                     // packet_queue_flush(&is->videoq);
                 }
                 if (is->seek_flags & AVSEEK_FLAG_BYTE) {
-                   set_clock(&is->extclk, NAN, 0);
+                   // set_clock(&is->extclk, NAN, 0);
+                   rExtclk.setClock(NAN, 0);
                 } else {
-                   set_clock(&is->extclk, seek_target / (double)AV_TIME_BASE, 0);
+                   // set_clock(&is->extclk, seek_target / (double)AV_TIME_BASE, 0);
+                    rExtclk.setClock(seek_target / (double)AV_TIME_BASE, 0);
                 }
             }
             is->seek_req = 0;
@@ -956,9 +967,11 @@ int decoThUserLogic::onLoopFrame()
                 }
                 break;
             }
+            /*
             SDL_LockMutex(wait_mutex);
             SDL_CondWaitTimeout(is->continue_read_thread, wait_mutex, 10);
             SDL_UnlockMutex(wait_mutex);
+            */
             break;
         } else {
             is->eof = 0;
@@ -1000,6 +1013,15 @@ int decoThUserLogic::onLoopEnd()
     return nRet;
 }
 
+static int decode_interrupt_cb(void *ctx)
+{
+    auto pT = (decoThUserLogic*) ctx;
+    NeetExitNtfAskMsg msg;
+    pT->getServer().sendMsg(msg);
+    pT->setState(pT->readState_willExit);
+    return 1; //is->abort_request;
+}
+
 int  decoThUserLogic:: initThis()
 {
     int  nRet = 0;
@@ -1009,7 +1031,7 @@ int  decoThUserLogic:: initThis()
         auto& ic = m_ic;
         int& ret = m_ret;
         auto& pkt = m_pkt;
-        auto&  wait_mutex = m_wait_mutex;
+        // auto&  wait_mutex = m_wait_mutex;
 
         int err, i;
         int st_index[AVMEDIA_TYPE_NB];
@@ -1019,7 +1041,7 @@ int  decoThUserLogic:: initThis()
 
         int scan_all_pmts_set = 0;
         int64_t pkt_ts;
-
+/*
         wait_mutex = SDL_CreateMutex();
         if (!wait_mutex) {
             av_log(NULL, AV_LOG_FATAL, "SDL_CreateMutex(): %s\n", SDL_GetError());
@@ -1028,7 +1050,7 @@ int  decoThUserLogic:: initThis()
             nRet = procPacketFunRetType_exitNow;
             break;
         }
-
+*/
         memset(st_index, -1, sizeof(st_index));
         is->eof = 0;
 
@@ -1049,7 +1071,7 @@ int  decoThUserLogic:: initThis()
             break;
         }
         ic->interrupt_callback.callback = decode_interrupt_cb;
-        ic->interrupt_callback.opaque = is;
+        ic->interrupt_callback.opaque = this;
         if (!av_dict_get(format_opts, "scan_all_pmts", NULL, AV_DICT_MATCH_CASE)) {
             av_dict_set(&format_opts, "scan_all_pmts", "1", AV_DICT_DONT_OVERWRITE);
             scan_all_pmts_set = 1;
@@ -1239,10 +1261,12 @@ void decoThUserLogic:: clean()
             SDL_PushEvent(&event);
             m_ret = 0;
         }
+        /*
         if (m_wait_mutex) {
             SDL_DestroyMutex(m_wait_mutex);
             m_wait_mutex = nullptr;
         }
+        */
     } while (0);
 }
 

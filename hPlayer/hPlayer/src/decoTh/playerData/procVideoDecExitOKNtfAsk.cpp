@@ -18,7 +18,7 @@ static int sprocVideoDecExitOKNtfAsk (decoThUserLogic& rLogic, decoTh& rServer)
 
     audioDecExitNtfAskMsg ask;
     rServer.sendMsg(ask);
-    rLogic.sendEmptyAudioPack();
+    // rLogic.sendEmptyAudioPack();
 	gInfo("Rec procVideoDecExitOKNtfAsk");
     return procPacketFunRetType_del;
 }

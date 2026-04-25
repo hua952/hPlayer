@@ -45,7 +45,7 @@ public:
     int serial ();
     bool  procLastUnpushPack();
     void  pushPack(AVPacket *pkt);
-    void  pushImportant(AVPacket* ppkt);
+    // void  pushImportant(AVPacket* ppkt);
     void cleanForSeek();
 private:
     void clean();

@@ -29,8 +29,10 @@ public:
     void  setState(readState  st);
     void       clean();
     void sendExitNtfToSub();
+    /*
     void    sendEmptySubtitleqPack();
     void  sendEmptyAudioPack();
+    */
 private:
     decoTh& m_rdecoTh;
     readState  m_readState {readState_mainNotInit};

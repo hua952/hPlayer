@@ -20,7 +20,7 @@ static int sprocReadPackExitNtfAsk (decoThUserLogic& rLogic, decoTh& rServer)
 
     subtitleqDecExitNtfAskMsg msg;
     rServer.sendMsg(msg);
-    rLogic.sendEmptySubtitleqPack ();
+    // rLogic.sendEmptySubtitleqPack ();
     rLogic.setState (decoThUserLogic::readState_willExit);
 
 	gInfo("Rec procReadPackExitNtfAsk");

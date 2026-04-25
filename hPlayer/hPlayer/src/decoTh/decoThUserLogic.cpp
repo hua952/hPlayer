@@ -882,8 +882,10 @@ int decoThUserLogic::onLoopFrame()
                     break;
                 }
                 rVidPackQ.pushPack (pkt);
+                /*
                 pkt->stream_index = is->video_stream;
                 rVidPackQ.pushImportant(pkt);
+                */
                 // packet_queue_put_nullpacket(&is->videoq, pkt, is->video_stream);
             }
             is->queue_attachments_req = 0;
@@ -895,9 +897,7 @@ int decoThUserLogic::onLoopFrame()
             // || (stream_has_enough_packets(is->audio_st, is->audio_stream, &is->audioq) &&
             || (!rAudioPackQ.mabeNeetPush()  &&
                 // stream_has_enough_packets(is->video_st, is->video_stream, &is->videoq) &&
-                !rVidPackQ.mabeNeetPush () &&
-                // stream_has_enough_packets(is->subtitle_st, is->subtitle_stream, &is->subtitleq)))) {
-                !rSubPackQ.mabeNeetPush ()))) {
+                !rVidPackQ.mabeNeetPush ()))) {
             /* wait 10 ms */
             
             // SDL_LockMutex(wait_mutex);
@@ -930,6 +930,7 @@ int decoThUserLogic::onLoopFrame()
         ret = av_read_frame(ic, pkt);
         if (ret < 0) {
             if ((ret == AVERROR_EOF || avio_feof(ic->pb)) && !is->eof) {
+                /*
                 if (is->video_stream >= 0) {
                     pkt->stream_index = is->video_stream;
                     rVidPackQ.pushImportant(pkt);
@@ -957,6 +958,7 @@ int decoThUserLogic::onLoopFrame()
                     }
                     // packet_queue_put_nullpacket(&is->subtitleq, pkt, is->subtitle_stream);
                 }
+                */
                 is->eof = 1;
             }
             if (ic->pb && ic->pb->error) {
@@ -1287,6 +1289,7 @@ void  decoThUserLogic:: sendExitNtfToSub()
         setState (readState_waiteSubExit);
     } while (0);
 }
+/*
 void   decoThUserLogic:: sendEmptyAudioPack()
 {
     auto& rGlobal = tSingleton<globalData>::single();
@@ -1307,13 +1310,8 @@ void     decoThUserLogic:: sendEmptySubtitleqPack()
     auto is = getVideoState();
     pkt->stream_index = is->subtitle_stream;
     rSubPackQ.pushImportant(pkt);
-    /*
-    auto pkt = av_packet_alloc();
-    VideoState *is = getVideoState();
-    packet_queue_put_nullpacket(&is->subtitleq, pkt, is->subtitle_stream);
-    */
 }
-
+*/
 void cpp_decoder_destroy(cppDecoder& rD)
 {
 }

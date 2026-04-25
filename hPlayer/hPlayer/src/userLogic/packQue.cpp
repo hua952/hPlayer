@@ -93,7 +93,7 @@ void   packQue:: pushPack(AVPacket *pkt)
         }
     } while (0);
 }
-
+/*
 void   packQue:: pushImportant(AVPacket* pkt)
 {
     do {
@@ -104,7 +104,7 @@ void   packQue:: pushImportant(AVPacket* pkt)
         pushPack(pkt);
     } while (0);
 }
-
+*/
 void  packQue:: clean()
 {
     while (front()) {

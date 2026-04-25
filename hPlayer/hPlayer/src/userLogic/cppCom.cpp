@@ -259,6 +259,16 @@ globalData::globalData ():m_audioPackQ(64), m_subPackQ(10), vidClk(&vidPackQ), m
 {
 }
 
+bool    globalData:: abort()
+{
+    return m_abort.load(std::memory_order_relaxed);
+}
+
+void    globalData :: setAbort(bool a)
+{
+    m_abort.store(a);
+}
+
 void cpp_sync_clock_to_slave(cppClock& c, cppClock &rSlave)
 {
     double clock = c.getClock ();

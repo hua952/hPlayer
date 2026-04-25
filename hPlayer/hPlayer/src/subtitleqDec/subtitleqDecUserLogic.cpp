@@ -26,6 +26,11 @@ int subtitleqDecUserLogic::onLoopFrame()
 {
     int nRet = 0;
     do {
+        auto& rGlobal = tSingleton<globalData>::single();
+        if (rGlobal.abort())  [[unlikely]]{
+            nRet = procPacketFunRetType_exitNow;
+            break;
+        }
         auto thisState = state();
         if (subtitleqLogicState_readNotInit == thisState ||  subtitleqLogicState_willExit == thisState) [[unlikely]]{
             break;
@@ -38,7 +43,6 @@ int subtitleqDecUserLogic::onLoopFrame()
             setState(subtitleqLogicState_ok);
         }
 
-        auto& rGlobal = tSingleton<globalData>::single();
         auto& rDecoder = rGlobal.m_audDec;
         auto& rSubDec = rGlobal.m_subDec;
         auto& rSubpQ =  rGlobal.m_subpQ;
@@ -47,15 +51,17 @@ int subtitleqDecUserLogic::onLoopFrame()
         // Frame *sp;
         int got_subtitle;
         double pts;
-
+        
         if (!rSubpQ.mabeNeetPush()) {
             break;
         }
+        /*
     auto funSendNeetMsg = [this]() {
             NeetExitNtfAskMsg msg;
             getServer().sendMsg(msg);
             setState(subtitleqLogicState_willExit);
         };
+        */
     // for (;;) {
     /*
         if (!(sp = frame_queue_peek_writable(&is->subpq))) {
@@ -67,7 +73,8 @@ int subtitleqDecUserLogic::onLoopFrame()
         auto sp = rSubpQ.nextWrite();
         // if ((got_subtitle = decoder_decode_frame(&is->subdec, NULL, &sp->sub)) < 0) {
         if ((got_subtitle = cpp_decoder_decode_frame(rSubDec, NULL, &sp->sub)) < 0) {
-            funSendNeetMsg ();
+            // funSendNeetMsg ();
+            rGlobal.setAbort(true);
             break;
         }
         pts = 0;

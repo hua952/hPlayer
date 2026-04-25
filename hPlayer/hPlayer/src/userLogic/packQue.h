@@ -38,8 +38,10 @@ public:
     void  allPackSizeAdd(int nAdd);
     int64_t allPackDuration ();
     void allPackDurationAdd (int64_t  nAdd);
+    /*
     int abort_request ();
     void setAbort_request (int nAbort);
+    */
     int serial ();
     bool  procLastUnpushPack();
     void  pushPack(AVPacket *pkt);
@@ -50,7 +52,7 @@ private:
     packNode m_lastUnpushpkt;
     std::atomic<int64_t> m_allPackDuration{ 0 };
     std::atomic<int> m_allPackSize{ 0 };
-    std::atomic<int> m_abort_request{0};
+    // std::atomic<int> m_abort_request{0};
     std::atomic<int> m_serial{0};
 };
 #endif

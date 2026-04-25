@@ -796,6 +796,10 @@ int decoThUserLogic::onLoopFrame()
             }
             setState (readState_ok);
         }
+        if (rGlobal.abort())  [[unlikely]]{
+            nRet = procPacketFunRetType_exitNow;
+            break;
+        }
         VideoState *is = getVideoState();
         auto& ic = m_ic;
         int& ret = m_ret;
@@ -1022,7 +1026,9 @@ static int decode_interrupt_cb(void *ctx)
     pT->setState(pT->readState_willExit);
     return 1; //is->abort_request;
     */
-    return 0;
+
+    auto& rGlobal = tSingleton<globalData>::single();
+    return rGlobal.abort();
 }
 
 int  decoThUserLogic:: initThis()

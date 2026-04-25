@@ -43,6 +43,10 @@ int audioDecUserLogic::onLoopFrame()
     auto& rSampQ = rGlobal.m_sampQ;
 
     do {
+        if (rGlobal.abort())  [[unlikely]]{
+            nRet = procPacketFunRetType_exitNow;
+            break;
+        }
         auto thisState = state();
         if (audioLogicState_readNotInit == thisState ||  audioLogicState_willExit == thisState) [[unlikely]]{
             break;
@@ -54,7 +58,7 @@ int audioDecUserLogic::onLoopFrame()
             }
             setState(audioLogicState_ok);
         }
-
+        
         if (!rSampQ.mabeNeetPush()) {
             break;
         }
@@ -102,7 +106,8 @@ int audioDecUserLogic::onLoopFrame()
                 ret = av_channel_layout_copy(&is->audio_filter_src.ch_layout, &frame->ch_layout);
                 if (ret < 0) {
 
-                    funSendNeetMsg ();
+                    // funSendNeetMsg ();
+                    rGlobal.setAbort(true);
                     break;
                     // goto the_end;
                 }
@@ -111,7 +116,8 @@ int audioDecUserLogic::onLoopFrame()
 
                 if ((ret = configure_audio_filters(is, afilters, 1)) < 0) {
 
-                    funSendNeetMsg ();
+                    // funSendNeetMsg ();
+                    rGlobal.setAbort(true);
                     break;
                     // goto the_end;
                 }
@@ -119,7 +125,8 @@ int audioDecUserLogic::onLoopFrame()
 
             if ((ret = av_buffersrc_add_frame(is->in_audio_filter, frame)) < 0) {
                 if (ret != AVERROR(EAGAIN)) {
-                    funSendNeetMsg ();
+                    rGlobal.setAbort(true);
+                    // funSendNeetMsg ();
                 }
                 break;
             }
@@ -162,7 +169,8 @@ int audioDecUserLogic::onLoopFrame()
         }
         // } while (ret >= 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF);
         if (!(ret >= 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)) {
-            funSendNeetMsg ();
+            // funSendNeetMsg ();
+            rGlobal.setAbort(true);
             break;
         }
     } while (0);

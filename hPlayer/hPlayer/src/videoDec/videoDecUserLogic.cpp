@@ -82,6 +82,11 @@ int videoDecUserLogic::onLoopFrame()
     int nRet = 0;
 
     do {
+        auto& rGlobal = tSingleton<globalData>::single();
+        if (rGlobal.abort())  [[unlikely]]{
+            nRet = procPacketFunRetType_exitNow;
+            break;
+        }
         VideoState *is = getVideoState ();
         auto& frame = m_frame;
         auto& graph = m_graph;
@@ -95,7 +100,6 @@ int videoDecUserLogic::onLoopFrame()
         auto& last_vfilter_idx = m_last_vfilter_idx;
 
 
-        auto& rGlobal = tSingleton<globalData>::single();
         auto& rDecoder = rGlobal.vidDec;
         auto& rVidPackQ = rGlobal.vidPackQ;
 
@@ -114,6 +118,7 @@ int videoDecUserLogic::onLoopFrame()
             }
             setState(videoDecLogicState_ok);
         }
+        
         if (!rVidPackQ.mabeNeetPush()) {
             break;
         }
@@ -156,9 +161,12 @@ int videoDecUserLogic::onLoopFrame()
                 SDL_PushEvent(&event);
                 goto the_end;
                 */
+                /*
                 NeetExitNtfAskMsg msg;
                 getServer().sendMsg(msg);
                 setState(videoDecLogicState_waitExit);
+                */
+                rGlobal.setAbort(true);
                 break;
             }
             filt_in  = is->in_video_filter;

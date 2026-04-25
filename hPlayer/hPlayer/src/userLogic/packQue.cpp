@@ -39,7 +39,7 @@ void packQue:: allPackDurationAdd (int64_t  nAdd)
 {
     m_allPackDuration.fetch_add(nAdd, std::memory_order_relaxed);
 }
-
+/*
 int  packQue:: abort_request ()
 {
     return m_abort_request.load(std::memory_order_relaxed);
@@ -49,7 +49,7 @@ void  packQue:: setAbort_request (int nAbort)
 {
     m_abort_request.store(nAbort, std::memory_order_relaxed);
 }
-
+*/
 int  packQue:: serial ()
 {
     return m_serial.load(std::memory_order_relaxed);
@@ -57,7 +57,7 @@ int  packQue:: serial ()
 
 void  packQue:: start ()
 {
-    m_abort_request.store(0, std::memory_order_relaxed);
+    // m_abort_request.store(0, std::memory_order_relaxed);
     m_serial.fetch_add(1, std::memory_order_relaxed);
 }
 

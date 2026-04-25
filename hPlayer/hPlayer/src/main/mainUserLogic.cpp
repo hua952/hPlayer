@@ -106,15 +106,21 @@ int mainUserLogic::onLoopBegin()
 int mainUserLogic::onLoopFrame()
 {
     int nRet = 0;
+    auto& rGlobal = tSingleton<globalData>::single();
     do {
+        if (rGlobal.abort())  [[unlikely]]{
+            nRet = procPacketFunRetType_exitNow;
+            break;
+        }
         if (mainState_willExit== m_mainState) [[unlikely]]{
             nRet = procPacketFunRetType_exitAfterLoop;
             break;
         }
         auto nR = ffplay_event_loop (getVideoState());
         if (nR) {
-            readPackExitNtfAskMsg msg;
-            getServer().sendMsg(msg);
+            rGlobal.setAbort(true);
+            // readPackExitNtfAskMsg msg;
+            // getServer().sendMsg(msg);
 
             // setState(mainUserLogic::mainState_willExit);
             // getServer().ntfOtherLocalServerExit();

@@ -12,6 +12,7 @@ extern "C"
 #include "cppClock.h"
 #include "frameQue.h"
 
+#include <atomic>
 struct cppDecoder {
     AVPacket *pkt;
     packQue* queue;
@@ -46,6 +47,11 @@ struct globalData
     frameQue      m_pictQ;
     frameQue      m_sampQ;
     frameQue      m_subpQ;
+
+    bool   abort();
+    void   setAbort(bool a);
+private:
+    std::atomic<bool> m_abort{false};
 };
 
 extern "C"

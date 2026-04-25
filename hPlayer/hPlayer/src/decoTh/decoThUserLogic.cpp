@@ -1015,11 +1015,14 @@ int decoThUserLogic::onLoopEnd()
 
 static int decode_interrupt_cb(void *ctx)
 {
+    /*
     auto pT = (decoThUserLogic*) ctx;
     NeetExitNtfAskMsg msg;
     pT->getServer().sendMsg(msg);
     pT->setState(pT->readState_willExit);
     return 1; //is->abort_request;
+    */
+    return 0;
 }
 
 int  decoThUserLogic:: initThis()

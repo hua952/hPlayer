@@ -28,8 +28,8 @@ public:
     readState  state ();
     void  setState(readState  st);
     void       clean();
-    void sendExitNtfToSub();
     /*
+    void sendExitNtfToSub();
     void    sendEmptySubtitleqPack();
     void  sendEmptyAudioPack();
     */

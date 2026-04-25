@@ -70,12 +70,13 @@ int audioDecUserLogic::onLoopFrame()
         int got_frame = 0;
         AVRational tb;
         int ret = 0;
-
+/*
         auto funSendNeetMsg = [this]() {
             NeetExitNtfAskMsg msg;
             getServer().sendMsg(msg);
             setState(audioLogicState_willExit);
         };
+        */
         // do {
         if ((got_frame = cpp_decoder_decode_frame(rDecoder, frame, NULL)) < 0) {
             // funSendNeetMsg ();

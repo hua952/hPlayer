@@ -533,22 +533,21 @@ static int cpp_stream_component_open_base(VideoState *is, int stream_index, logi
         is->queue_attachments_req = 1;
         break;
     case AVMEDIA_TYPE_SUBTITLE:
+        /*
         is->subtitle_stream = stream_index;
         is->subtitle_st = ic->streams[stream_index];
 
         // if ((ret = decoder_init(&is->subdec, avctx, &is->subtitleq, is->continue_read_thread)) < 0)
         if ((ret = cpp_decoder_init(rGlobal.m_subDec, avctx, &rGlobal.m_subPackQ)) < 0)
             goto fail;
-        /*
-        if ((ret = decoder_start(&is->subdec, subtitle_thread, "subtitle_decoder", is)) < 0)
-            goto out;
-        */
+        
         // packet_queue_start(is->subdec.queue);
         rGlobal.m_subPackQ.start();
         {
             subtitleqAskMsg msg;
             rWork.sendMsg(msg);
         }
+        */
         break;
     default:
         break;
@@ -872,7 +871,8 @@ int decoThUserLogic::onLoopFrame()
         if (is->queue_attachments_req) {
             if (is->video_st && is->video_st->disposition & AV_DISPOSITION_ATTACHED_PIC) {
                 if ((ret = av_packet_ref(pkt, &is->video_st->attached_pic)) < 0) {
-                    sendExitNtfToSub();
+                    // sendExitNtfToSub();
+                    rGlobal.setAbort(true);
                     break;
                     // goto fail;
                 }
@@ -915,7 +915,8 @@ int decoThUserLogic::onLoopFrame()
             } else if (autoexit) {
                 ret = AVERROR_EOF;
                 // goto fail;
-                sendExitNtfToSub();
+                // sendExitNtfToSub();
+                rGlobal.setAbort(true);
                 break;
             }
         }
@@ -969,7 +970,8 @@ int decoThUserLogic::onLoopFrame()
                     break;
                 */
                 if (autoexit) {
-                    sendExitNtfToSub();
+                    rGlobal.setAbort(true);
+                    // sendExitNtfToSub();
                 }
                 break;
             }
@@ -1280,7 +1282,7 @@ void decoThUserLogic:: clean()
         */
     } while (0);
 }
-
+/*
 void  decoThUserLogic:: sendExitNtfToSub()
 {
     do {
@@ -1289,7 +1291,7 @@ void  decoThUserLogic:: sendExitNtfToSub()
         setState (readState_waiteSubExit);
     } while (0);
 }
-/*
+
 void   decoThUserLogic:: sendEmptyAudioPack()
 {
     auto& rGlobal = tSingleton<globalData>::single();

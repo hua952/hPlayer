@@ -33,45 +33,5 @@
             <ask>
             </ask>
         </initAudio>
-        <subtitleq>
-            <ask>
-            </ask>
-        </subtitleq>
-        <readPackExitNtf>
-            <ask>
-            </ask>
-        </readPackExitNtf>
-        <readPackExitOKNtf>
-            <ask>
-            </ask>
-        </readPackExitOKNtf>
-        <videoDecExitNtf>
-            <ask>
-            </ask>
-        </videoDecExitNtf>
-        <videoDecExitOKNtf>
-            <ask>
-            </ask>
-        </videoDecExitOKNtf>
-        <audioDecExitNtf>
-            <ask>
-            </ask>
-        </audioDecExitNtf>
-        <audioDecExitOKNtf>
-            <ask>
-            </ask>
-        </audioDecExitOKNtf>
-        <subtitleqDecExitNtf>
-            <ask>
-            </ask>
-        </subtitleqDecExitNtf>
-        <subtitleqDecExitOKNtf>
-            <ask>
-            </ask>
-        </subtitleqDecExitOKNtf>
-        <NeetExitNtf>
-            <ask>
-            </ask>
-        </NeetExitNtf>
     </playerData>
 </rpc>

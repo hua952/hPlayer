@@ -38,7 +38,6 @@ file(GLOB genSrcS src/userLogic/*.cpp src/*.cpp src/main/*.cpp src/main/userLogi
 src/decoTh/*.cpp src/decoTh/userLogic/*.cpp src/decoTh/playerData/*.cpp 
 src/videoDec/*.cpp src/videoDec/userLogic/*.cpp src/videoDec/playerData/*.cpp 
 src/audioDec/*.cpp src/audioDec/userLogic/*.cpp src/audioDec/playerData/*.cpp 
-src/subtitleqDec/*.cpp src/subtitleqDec/userLogic/*.cpp src/subtitleqDec/playerData/*.cpp 
 )
 set(defS)
 set(libPath)
@@ -73,9 +72,6 @@ src/videoDec/userLogic
 ${CMAKE_SOURCE_DIR}/gen/hPlayer/src/audioDec
 src/audioDec
 src/audioDec/userLogic
-${CMAKE_SOURCE_DIR}/gen/hPlayer/src/subtitleqDec
-src/subtitleqDec
-src/subtitleqDec/userLogic
 )
 list(APPEND libPath set(libDir ${firstBuildDir}/lib ${appFrameDir}/lib))
 link_directories(${libPath} ${libDep})

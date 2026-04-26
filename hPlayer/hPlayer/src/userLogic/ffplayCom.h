@@ -278,7 +278,6 @@ int ffplayMain(int argc, char **argv);
 VideoState* getVideoState();
 void do_exit(VideoState *is);
 void step_to_next_frame(VideoState *is);
-
 int cmp_audio_fmts(enum AVSampleFormat fmt1, int64_t channel_count1,
                    enum AVSampleFormat fmt2, int64_t channel_count2);
 int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame);
@@ -289,8 +288,8 @@ int create_hwaccel(AVBufferRef **device_ctx);
 void set_default_window_size(int width, int height, AVRational sar);
 int is_realtime(AVFormatContext *s);
 void stream_seek(VideoState *is, int64_t pos, int64_t rel, int by_bytes);
+
 int get_master_sync_type(VideoState *is);
-double get_clock(Clock *c);
 void video_display(VideoState *is);
 void calculate_display_rect(SDL_Rect *rect,
                                    int scr_xleft, int scr_ytop, int scr_width, int scr_height,

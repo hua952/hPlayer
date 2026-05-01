@@ -275,11 +275,5 @@ static void video_decoder_abort(Decoder *d, FrameQueue *fq)
 */
 extern "C"
 {
-    void cleanVideoDec()
-    {
-        auto& rGlobal = tSingleton<globalData>::single();
-        auto& rDecoder = rGlobal.vidDec;
-        av_packet_free(&rDecoder.pkt);
-        avcodec_free_context(&rDecoder.avctx);
-    }
+    
 }

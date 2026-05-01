@@ -238,7 +238,8 @@ extern int exit_on_mousedown;
 extern int loop;
 extern int framedrop;
 extern int infinite_buffer;
-extern enum ShowMode show_mode;
+/*extern enum ShowMode show_mode;*/
+extern int show_mode;
 extern const char *audio_codec_name;
 extern const char *subtitle_codec_name;
 extern const char *video_codec_name;
@@ -284,13 +285,13 @@ int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vf
 int get_video_frame(VideoState *is, AVFrame *frame);
 
 int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format);
-int create_hwaccel(AVBufferRef **device_ctx);
+/*int create_hwaccel(AVBufferRef **device_ctx);*/
 void set_default_window_size(int width, int height, AVRational sar);
 int is_realtime(AVFormatContext *s);
 void stream_seek(VideoState *is, int64_t pos, int64_t rel, int by_bytes);
 
 int get_master_sync_type(VideoState *is);
-void video_display(VideoState *is);
+/*void video_display(VideoState *is);*/
 void calculate_display_rect(SDL_Rect *rect,
                                    int scr_xleft, int scr_ytop, int scr_width, int scr_height,
                                    int pic_width, int pic_height, AVRational pic_sar);

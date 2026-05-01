@@ -58,7 +58,7 @@ extern "C"
 {
 void cpp_decoder_destroy(cppDecoder& rD);
 void cpp_check_external_clock_speed(VideoState *is);
-void cpp_video_refresh(void *opaque, double *remaining_time);
+/*void cpp_video_refresh(void *opaque, double *remaining_time);*/
 double cpp_get_master_clock(VideoState *is);
 // double cpp_compute_target_delay(double delay, VideoState *is);
 int cpp_queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial);

@@ -5,43 +5,7 @@
 
 extern "C"
 {
-int64_t cpp_video_frame_queue_last_pos()
-{
-    auto& rGlobal = tSingleton<globalData>::single();
-    auto& rVidClk = rGlobal.vidClk;
-    auto& rPictQ = rGlobal.m_pictQ;
-    auto nRet = -1;
-    do {
-        if (!rPictQ.haveLastFrame()) {
-            break;
-        }
-        auto fp = rPictQ.lastFrame();
-        if (fp->serial != rVidClk.serial()) {
-            break;
-        }
-        nRet = fp->pos;
-    } while (0);
-    return nRet;
-}
 
-int64_t cpp_audio_frame_queue_last_pos()
-{
-    auto& rGlobal = tSingleton<globalData>::single();
-    auto& rAudClk = rGlobal.m_audclk;
-    auto& rSampQ = rGlobal.m_sampQ;
-    auto nRet = -1;
-    do {
-        if (!rSampQ.haveLastFrame()) {
-            break;
-        }
-        auto fp = rSampQ.lastFrame();
-        if (fp->serial != rAudClk.serial()) {
-            break;
-        }
-        nRet = fp->pos;
-    } while (0);
-    return nRet;
-}
 
 /*
 cppFrame* cpp_frame_queue_peek_writable(FrameQueue *f)

@@ -1,5 +1,5 @@
 #include "logicWorker.h"
-
+#include "baseUserLogic.h"
 extern "C"
 {
     #include "ffplayCom.h"
@@ -7,7 +7,7 @@ extern "C"
 
 
 class decoTh;
-class decoThUserLogic: public IUserLogicWorker
+class decoThUserLogic: public IUserLogicWorker, public baseUserLogic
 {
 public:
     enum readState

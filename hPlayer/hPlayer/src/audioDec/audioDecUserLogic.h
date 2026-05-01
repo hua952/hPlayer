@@ -1,4 +1,6 @@
 #include <deque>
+
+#include "baseUserLogic.h"
 extern "C"
 {
     #include "ffplayCom.h"
@@ -8,7 +10,7 @@ extern "C"
 #include "logicWorker.h"
 
 class audioDec;
-class audioDecUserLogic: public IUserLogicWorker
+class audioDecUserLogic: public IUserLogicWorker, public baseUserLogic
 {
 public:
     enum audioLogicState

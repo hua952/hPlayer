@@ -1,10 +1,11 @@
 #include "logicWorker.h"
+#include "baseUserLogic.h"
 extern "C"
 {
     #include "ffplayCom.h"
 }
 class main;
-class mainUserLogic: public IUserLogicWorker
+class mainUserLogic: public IUserLogicWorker, public baseUserLogic
 {
 public:
     enum mainState 

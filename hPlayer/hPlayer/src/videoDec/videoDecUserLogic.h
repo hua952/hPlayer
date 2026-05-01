@@ -1,5 +1,5 @@
 #include "logicWorker.h"
-
+#include "baseUserLogic.h"
 
 extern "C"
 {
@@ -7,7 +7,7 @@ extern "C"
 }
 
 class videoDec;
-class videoDecUserLogic: public IUserLogicWorker
+class videoDecUserLogic: public IUserLogicWorker, public baseUserLogic
 {
 public:
     enum videoDecLogicState

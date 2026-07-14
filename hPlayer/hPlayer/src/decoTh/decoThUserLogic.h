@@ -33,7 +33,10 @@ public:
     void    sendEmptySubtitleqPack();
     void  sendEmptyAudioPack();
     */
+    bool  pausedCache ();
+    void  setPausedCache (bool v);
 private:
+    bool  m_pausedCache{false};
     decoTh& m_rdecoTh;
     readState  m_readState {readState_mainNotInit};
     AVFormatContext* m_ic = nullptr;

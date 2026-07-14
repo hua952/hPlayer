@@ -50,8 +50,14 @@ struct globalData
 
     bool   abort();
     void   setAbort(bool a);
+    bool   paused();
+    void   setPaused(bool b);
+    double curPlayPos ();
+    void   setCurPlayPos (double pos);
 private:
+    std::atomic<bool> m_paused{false};
     std::atomic<bool> m_abort{false};
+    std::atomic<double> m_curPlayPos;
 };
 
 extern "C"

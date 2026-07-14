@@ -8,10 +8,12 @@
             <ask>
                 <pos dataType="double"/>
             </ask>
-            <ret>
-                <pos dataType="double"/>
-            </ret>
         </seekPos>
+        <paused>
+            <ask>
+                <pos dataType="double"/>
+            </ask>
+        </paused>
         <playURL>
             <ask>
                 <url dataType="char" length="512" haveSize="1" zeroEnd="1" commit="文件名或网址"/>

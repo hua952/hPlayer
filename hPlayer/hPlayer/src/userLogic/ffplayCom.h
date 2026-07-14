@@ -123,7 +123,7 @@ enum {
 typedef struct VideoState {
     const AVInputFormat *iformat;
     int force_refresh;
-    int paused;
+    /*int paused;*/
     int last_paused;
     int queue_attachments_req;
     int seek_req;
@@ -278,7 +278,7 @@ int ffplay_event_loop(VideoState *cur_stream);
 int ffplayMain(int argc, char **argv);
 VideoState* getVideoState();
 void do_exit(VideoState *is);
-void step_to_next_frame(VideoState *is);
+/*void step_to_next_frame(VideoState *is);*/
 int cmp_audio_fmts(enum AVSampleFormat fmt1, int64_t channel_count1,
                    enum AVSampleFormat fmt2, int64_t channel_count2);
 int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame);

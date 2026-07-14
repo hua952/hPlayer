@@ -118,7 +118,7 @@ static int audio_decode_frame(VideoState *is)
     auto& rAudioPackQ = rGlobal.m_audioPackQ;
     auto& rSampQ = rGlobal.m_sampQ;
 
-    if (is->paused)
+    if (rGlobal.paused())
         return -1;
 
     do {
@@ -601,15 +601,7 @@ int decoThUserLogic::onLoopFrame()
         int& ret = m_ret;
         auto& pkt = m_pkt;
         // auto&  wait_mutex = m_wait_mutex;
-
-    // for (;;) {
-        /*
-        if (is->abort_request) [[unlikely]] {
-            gInfo("is->abort_request will Exit");
-            sendExitNtfToSub();
-            break;
-        }
-        */
+/*
         if (is->paused != is->last_paused) {
             is->last_paused = is->paused;
             if (is->paused)
@@ -617,8 +609,9 @@ int decoThUserLogic::onLoopFrame()
             else
                 av_read_play(ic);
         }
+        */
 #if CONFIG_RTSP_DEMUXER || CONFIG_MMSH_PROTOCOL
-        if (is->paused &&
+        if (pausedCache() &&
                 (!strcmp(ic->iformat->name, "rtsp") ||
                  (ic->pb && !strncmp(input_filename, "mmsh:", 5)))) {
             /* wait 10 ms to avoid trying to get another packet */
@@ -662,8 +655,10 @@ int decoThUserLogic::onLoopFrame()
             is->seek_req = 0;
             is->queue_attachments_req = 1;
             is->eof = 0;
-            if (is->paused)
+            /*
+            if (pausedCache())
                 step_to_next_frame(is);
+                */
         }
         if (is->queue_attachments_req) {
             if (is->video_st && is->video_st->disposition & AV_DISPOSITION_ATTACHED_PIC) {
@@ -702,7 +697,7 @@ int decoThUserLogic::onLoopFrame()
             // SDL_UnlockMutex(wait_mutex);
             break;
         }
-        if (!is->paused &&
+        if (!pausedCache()&&
             // (!is->audio_st || (is->auddec.finished == is->audioq.serial && frame_queue_nb_remaining(&is->sampq) == 0)) &&
             (!is->audio_st || (rAudDec.finished == rAudioPackQ.serial() && rSampQ.size() == 0)) &&
             // (!is->video_st || (is->viddec.finished == is->videoq.serial && frame_queue_nb_remaining(&is->pictq) == 0))) {
@@ -1113,5 +1108,15 @@ void     decoThUserLogic:: sendEmptySubtitleqPack()
 */
 void cpp_decoder_destroy(cppDecoder& rD)
 {
+}
+
+bool  decoThUserLogic:: pausedCache ()
+{
+    return m_pausedCache;
+}
+
+void  decoThUserLogic:: setPausedCache (bool v)
+{
+    m_pausedCache = v;
 }
 

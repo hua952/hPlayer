@@ -20,6 +20,15 @@ static double vp_duration(VideoState *is, cppFrame *vp, cppFrame *nextvp) {
     }
 }
 
+static void step_to_next_frame(VideoState *is)
+{
+    /* if the stream is paused unpause it, then step */
+    auto& rGlobal = tSingleton<globalData>::single();
+    if (rGlobal.paused())
+        cpp_stream_toggle_pause(is);
+    is->step = 1;
+}
+
 extern "C"
 {
 void cpp_stream_toggle_pause(VideoState *is);
@@ -100,6 +109,7 @@ static void video_audio_display(VideoState *s)
     int ch, channels, h, h2;
     int64_t time_diff;
     int rdft_bits, nb_freq;
+    auto& rGlobal = tSingleton<globalData>::single();
 
     for (rdft_bits = 1; (1 << rdft_bits) < 2 * s->height; rdft_bits++)
         ;
@@ -108,7 +118,7 @@ static void video_audio_display(VideoState *s)
     /* compute display index : center on currently output samples */
     channels = s->audio_tgt.ch_layout.nb_channels;
     nb_display_channels = channels;
-    if (!s->paused) {
+    if (!rGlobal.paused()) {
         int data_used= s->show_mode == VideoState::SHOW_MODE_WAVES ? s->width : (2*nb_freq);
         n = 2 * channels;
         delay = s->audio_write_buf_size;
@@ -240,7 +250,7 @@ static void video_audio_display(VideoState *s)
             }
             SDL_RenderCopy(renderer, s->vis_texture, NULL, NULL);
         }
-        if (!s->paused)
+        if (!rGlobal.paused())
             s->xpos++;
     }
 }
@@ -524,8 +534,8 @@ void cpp_stream_toggle_pause(VideoState *is)
     auto& rVidClk = rGlobal.vidClk;
     auto& rAudClk = rGlobal.m_audclk;
     auto& rExtclk = rGlobal.m_extclk;
-
-    if (is->paused) {
+    auto bP = rGlobal.paused();
+    if (rGlobal.paused()) {
         // is->frame_timer += av_gettime_relative() / 1000000.0 - is->vidclk.last_updated;
         is->frame_timer += av_gettime_relative() / 1000000.0 - rVidClk.lastUpdated();
         if (is->read_pause_return != AVERROR(ENOSYS)) {
@@ -537,10 +547,12 @@ void cpp_stream_toggle_pause(VideoState *is)
     }
     //set_clock(&is->extclk, get_clock(&is->extclk), is->extclk.serial);
     rExtclk.setClock(rExtclk.getClock(), rExtclk.serial());
-    is->paused =  !is->paused;
-    rVidClk.setPaused(is->paused);
-    rAudClk.setPaused(is->paused);
-    rExtclk.setPaused(is->paused);
+    bP = !bP;
+    rGlobal.setPaused (bP);
+    //is->paused =  !is->paused;
+    rVidClk.setPaused(bP);
+    rAudClk.setPaused(bP);
+    rExtclk.setPaused(bP);
 }
 }
 
@@ -831,8 +843,7 @@ static void cpp_video_refresh(void *opaque, double *remaining_time)
     auto& rSubPackQ = rGlobal.m_subPackQ;
 
     cppFrame *sp, *sp2;
-
-    if (!is->paused && get_master_sync_type(is) == AV_SYNC_EXTERNAL_CLOCK && is->realtime) {
+    if (!rGlobal.paused() && get_master_sync_type(is) == AV_SYNC_EXTERNAL_CLOCK && is->realtime) {
         /*check_external_clock_speed(is);*/
         cpp_check_external_clock_speed(is);
     }
@@ -870,7 +881,7 @@ retry:
             if (lastvp->serial != vp->serial)
                 is->frame_timer = av_gettime_relative() / 1000000.0;
 
-            if (is->paused)
+            if (rGlobal.paused())
                 goto display;
 
             /* compute nominal last_duration */
@@ -948,7 +959,7 @@ retry:
             rPictQ.popFrame();
             is->force_refresh = 1;
 
-            if (is->step && !is->paused)
+            if (is->step && !rGlobal.paused())
                 cpp_stream_toggle_pause(is);
         }
 display:
@@ -1014,6 +1025,8 @@ display:
 
 static void refresh_loop_wait_event(VideoState *is, SDL_Event *event) {
     double remaining_time = 0.0;
+    auto& rGlobal = tSingleton<globalData>::single();
+
     SDL_PumpEvents();
     while (!SDL_PeepEvents(event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT)) {
         if (!cursor_hidden && av_gettime_relative() - cursor_last_shown > CURSOR_HIDE_DELAY) {
@@ -1023,7 +1036,7 @@ static void refresh_loop_wait_event(VideoState *is, SDL_Event *event) {
         if (remaining_time > 0.0)
             av_usleep((int64_t)(remaining_time * 1000000.0));
         remaining_time = REFRESH_RATE;
-        if (is->show_mode != VideoState::SHOW_MODE_NONE && (!is->paused || is->force_refresh))
+        if (is->show_mode != VideoState::SHOW_MODE_NONE && (!rGlobal.paused() || is->force_refresh))
             cpp_video_refresh(is, &remaining_time);
         SDL_PumpEvents();
     }

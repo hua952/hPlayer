@@ -325,14 +325,6 @@ void stream_seek(VideoState *is, int64_t pos, int64_t rel, int by_bytes)
     }
 }
 
-void step_to_next_frame(VideoState *is)
-{
-    /* if the stream is paused unpause it, then step */
-    if (is->paused)
-        cpp_stream_toggle_pause(is);
-    is->step = 1;
-}
-
 static int configure_filtergraph(AVFilterGraph *graph, const char *filtergraph,
                                  AVFilterContext *source_ctx, AVFilterContext *sink_ctx)
 {

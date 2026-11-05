@@ -202,7 +202,7 @@ typedef struct VideoState {
     AVFilterContext *out_audio_filter;  // the last filter in the audio chain
     AVFilterGraph *agraph;              // audio filter graph
 
-    int last_video_stream, last_audio_stream, last_subtitle_stream;
+    /*int last_video_stream, last_audio_stream, last_subtitle_stream;*/
 } VideoState;
 
 extern const AVInputFormat *file_iformat;

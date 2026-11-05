@@ -436,9 +436,18 @@ static int cpp_stream_component_open_base(VideoState *is, int stream_index, logi
     codec = avcodec_find_decoder(avctx->codec_id);
 
     switch(avctx->codec_type){
-        case AVMEDIA_TYPE_AUDIO   : is->last_audio_stream    = stream_index; forced_codec_name =    audio_codec_name; break;
-        case AVMEDIA_TYPE_SUBTITLE: is->last_subtitle_stream = stream_index; forced_codec_name = subtitle_codec_name; break;
-        case AVMEDIA_TYPE_VIDEO   : is->last_video_stream    = stream_index; forced_codec_name =    video_codec_name; break;
+        case AVMEDIA_TYPE_AUDIO   :
+            // is->last_audio_stream    = stream_index;
+            forced_codec_name =    audio_codec_name;
+            break;
+        case AVMEDIA_TYPE_SUBTITLE:
+            // is->last_subtitle_stream = stream_index;
+            forced_codec_name = subtitle_codec_name;
+            break;
+        case AVMEDIA_TYPE_VIDEO   :
+            // is->last_video_stream    = stream_index;
+            forced_codec_name =    video_codec_name;
+            break;
     }
     if (forced_codec_name)
         codec = avcodec_find_decoder_by_name(forced_codec_name);

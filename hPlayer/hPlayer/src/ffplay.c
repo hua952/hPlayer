@@ -802,9 +802,11 @@ static VideoState *stream_open(const char *filename/*,
     is = (VideoState*)(av_mallocz(sizeof(VideoState)));
     if (!is)
         return NULL;
+    /*
     is->last_video_stream = is->video_stream = -1;
     is->last_audio_stream = is->audio_stream = -1;
     is->last_subtitle_stream = is->subtitle_stream = -1;
+    */
     is->filename = av_strdup(filename);
     if (!is->filename)
         goto fail;

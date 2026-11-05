@@ -263,6 +263,12 @@ void videoDecUserLogic:: setState(videoDecLogicState  st)
     m_state = st;
 }
 
+
+logicWorker& videoDecUserLogic:: worker()
+{
+    return getServer();
+}
+
 /*
 static void video_decoder_abort(Decoder *d, FrameQueue *fq)
 {

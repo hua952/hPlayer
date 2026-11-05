@@ -20,11 +20,13 @@
                 <videoDec>
                     <procRpc>
                         <initvideoDec askType="ask"/>
+                        <setStreamIndex askType="ask"/>
                     </procRpc>
                 </videoDec>
                 <audioDec>
                     <procRpc>
                         <initAudio askType="ask"/>
+                        <setStreamIndex askType="ask"/>
                     </procRpc>
                 </audioDec>
             </server>

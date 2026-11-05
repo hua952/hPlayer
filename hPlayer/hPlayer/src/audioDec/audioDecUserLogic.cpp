@@ -8,6 +8,11 @@ audioDecUserLogic::audioDecUserLogic (audioDec& rServer):m_raudioDec(rServer)
 {
 }
 
+logicWorker&   audioDecUserLogic:: worker()
+{
+    return getServer();
+}
+
 int audioDecUserLogic::onLoopBegin()
 {
     int nRet = 0;

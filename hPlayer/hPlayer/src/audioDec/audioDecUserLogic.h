@@ -31,6 +31,8 @@ public:
     int  initThis();
     void  clean();
     bufQue&  getBufQue ();
+
+    logicWorker&  worker() override;
 private:
     bufQue  m_bufQue;
     audioDec& m_raudioDec;

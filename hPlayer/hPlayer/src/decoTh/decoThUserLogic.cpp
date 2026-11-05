@@ -4,6 +4,8 @@
 #include "cppCom.h"
 #include "tSingleton.h"
 #include "hPlayerConfig.h"
+#include "playerDataRpc.h"
+#include "loopHandleS.h"
 
 extern "C"
 {
@@ -16,11 +18,11 @@ void cpp_check_external_clock_speed(VideoState *is) {
     auto& rExtclk = rGlobal.m_extclk;
     auto vSize = rVidPackQ.size();
     auto aSize = rAudioPackQ.size();
-   if (is->video_stream >= 0 && vSize <= EXTERNAL_CLOCK_MIN_FRAMES ||
-       is->audio_stream >= 0 && aSize <= EXTERNAL_CLOCK_MIN_FRAMES) {
+   if (rGlobal.videoStream() >= 0 && vSize <= EXTERNAL_CLOCK_MIN_FRAMES ||
+       rGlobal.audioStream() >= 0 && aSize <= EXTERNAL_CLOCK_MIN_FRAMES) {
        rExtclk.setClockSpeed(FFMAX(EXTERNAL_CLOCK_SPEED_MIN, rExtclk.speed() - EXTERNAL_CLOCK_SPEED_STEP));
-   } else if ((is->video_stream < 0 || vSize > EXTERNAL_CLOCK_MAX_FRAMES) &&
-              (is->audio_stream < 0 || aSize > EXTERNAL_CLOCK_MAX_FRAMES)) {
+   } else if ((rGlobal.videoStream() < 0 || vSize > EXTERNAL_CLOCK_MAX_FRAMES) &&
+              (rGlobal.audioStream() < 0 || aSize > EXTERNAL_CLOCK_MAX_FRAMES)) {
        rExtclk.setClockSpeed(FFMIN(EXTERNAL_CLOCK_SPEED_MAX, rExtclk.speed() + EXTERNAL_CLOCK_SPEED_STEP));
    } else {
        double speed = rExtclk.speed();
@@ -406,8 +408,10 @@ static int create_hwaccel(AVBufferRef **device_ctx)
 
 
 /* open a given stream. Return 0 if OK */
-static int cpp_stream_component_open_base(VideoState *is, int stream_index, logicWorker& rWork)
+int  decoThUserLogic:: cpp_stream_component_open_base(int stream_index)
 {
+    VideoState *is = getVideoState();
+    logicWorker& rWork = worker();
     AVFormatContext *ic = is->ic;
     AVCodecContext *avctx;
     const AVCodec *codec;
@@ -532,7 +536,14 @@ static int cpp_stream_component_open_base(VideoState *is, int stream_index, logi
            we correct audio sync only if larger than this threshold */
         is->audio_diff_threshold = (double)(is->audio_hw_buf_size) / is->audio_tgt.bytes_per_sec;
 
-        is->audio_stream = stream_index;
+        // is->audio_stream = stream_index;
+        rGlobal.setAudioStream(stream_index);
+        {
+            setStreamIndexAskMsg msg;
+            auto pU = msg.pack();
+            pU->m_streamIndex = stream_index;
+            rWork.sendMsg(msg, hPlayerServerTmpID_audioDec);
+        }
         is->audio_st = ic->streams[stream_index];
 
         if ((ret = cpp_decoder_init(rAudDec, avctx, &rAudioPackQ)) < 0)
@@ -549,7 +560,14 @@ static int cpp_stream_component_open_base(VideoState *is, int stream_index, logi
         SDL_PauseAudioDevice(audio_dev, 0);
         break;
     case AVMEDIA_TYPE_VIDEO:
-        is->video_stream = stream_index;
+        // is->video_stream = stream_index;
+        rGlobal.setVideoStream (stream_index);
+        {
+            setStreamIndexAskMsg msg;
+            auto pU = msg.pack();
+            pU->m_streamIndex = stream_index;
+            rWork.sendMsg(msg, hPlayerServerTmpID_videoDec);
+        }
         is->video_st = ic->streams[stream_index];
 
         if ((ret = cpp_decoder_init(rGlobal.vidDec, avctx, &rGlobal.vidPackQ)) < 0)
@@ -642,15 +660,15 @@ int decoThUserLogic::onLoopFrame()
                 av_log(NULL, AV_LOG_ERROR,
                        "%s: error while seeking\n", is->ic->url);
             } else {
-                if (is->audio_stream >= 0) {
+                if (rGlobal.audioStream() >= 0) {
                     rAudioPackQ.cleanForSeek();
                     // packet_queue_flush(&is->audioq);
                 }
-                if (is->subtitle_stream >= 0) {
+                if (rGlobal.subtitleStream() >= 0) {
                     rSubPackQ.cleanForSeek();
                     // packet_queue_flush(&is->subtitleq);
                 }
-                if (is->video_stream >= 0) {
+                if (rGlobal.videoStream() >= 0) {
                     rVidPackQ.cleanForSeek();
                     // packet_queue_flush(&is->videoq);
                 }
@@ -794,14 +812,14 @@ int decoThUserLogic::onLoopFrame()
                 av_q2d(ic->streams[pkt->stream_index]->time_base) -
                 (double)(start_time != AV_NOPTS_VALUE ? start_time : 0) / 1000000
                 <= ((double)duration / 1000000);
-        if (pkt->stream_index == is->audio_stream && pkt_in_play_range) {
+        if (pkt->stream_index == rGlobal.audioStream() && pkt_in_play_range) {
             // packet_queue_put(&is->audioq, pkt);
             rAudioPackQ.pushPack (pkt);
-        } else if (pkt->stream_index == is->video_stream && pkt_in_play_range
+        } else if (pkt->stream_index == rGlobal.videoStream() && pkt_in_play_range
                    && !(is->video_st->disposition & AV_DISPOSITION_ATTACHED_PIC)) {
             // packet_queue_put(&is->videoq, pkt);
             rVidPackQ.pushPack (pkt);
-        } else if (pkt->stream_index == is->subtitle_stream && pkt_in_play_range) {
+        } else if (pkt->stream_index == rGlobal.subtitleStream() && pkt_in_play_range) {
             // packet_queue_put(&is->subtitleq, pkt);
             rSubPackQ.pushPack (pkt);
         } else {
@@ -859,7 +877,7 @@ int  decoThUserLogic:: initThis()
     const auto& rConfig = tSingleton<hPlayerConfig>::single();
 
     do {
-        
+        auto& rGlobal = tSingleton<globalData>::single();
         VideoState *is = getVideoState();
         auto& ic = m_ic;
         int& ret = m_ret;
@@ -1044,21 +1062,21 @@ int  decoThUserLogic:: initThis()
 
         /* open the streams */
         if (st_index[AVMEDIA_TYPE_AUDIO] >= 0) {
-            cpp_stream_component_open_base(is, st_index[AVMEDIA_TYPE_AUDIO], getServer());
+            cpp_stream_component_open_base(st_index[AVMEDIA_TYPE_AUDIO]);
         }
 
         ret = -1;
         if (st_index[AVMEDIA_TYPE_VIDEO] >= 0) {
-            ret = cpp_stream_component_open_base(is, st_index[AVMEDIA_TYPE_VIDEO], getServer());
+            ret = cpp_stream_component_open_base(st_index[AVMEDIA_TYPE_VIDEO]);
         }
         if (is->show_mode == VideoState::SHOW_MODE_NONE)
             is->show_mode = ret >= 0 ? VideoState::SHOW_MODE_VIDEO : VideoState::SHOW_MODE_RDFT;
 
         if (st_index[AVMEDIA_TYPE_SUBTITLE] >= 0) {
-            cpp_stream_component_open_base(is, st_index[AVMEDIA_TYPE_SUBTITLE], getServer());
+            cpp_stream_component_open_base(st_index[AVMEDIA_TYPE_SUBTITLE]);
         }
 
-        if (is->video_stream < 0 && is->audio_stream < 0) {
+        if (rGlobal.videoStream() < 0 && rGlobal.audioStream() < 0) {
             av_log(NULL, AV_LOG_FATAL, "Failed to open file '%s' or configure filtergraph\n",
                     is->filename);
             ret = -1;
@@ -1151,5 +1169,10 @@ bool  decoThUserLogic:: pausedCache ()
 void  decoThUserLogic:: setPausedCache (bool v)
 {
     m_pausedCache = v;
+}
+
+logicWorker& decoThUserLogic:: worker()
+{
+    return getServer();
 }
 

@@ -135,7 +135,7 @@ typedef struct VideoState {
     int realtime;
 
 
-    int audio_stream;
+    /*int audio_stream;*/
 
     int av_sync_type;
 
@@ -179,13 +179,13 @@ typedef struct VideoState {
     SDL_Texture *sub_texture;
     SDL_Texture *vid_texture;
 
-    int subtitle_stream;
+    /*int subtitle_stream;*/
     AVStream *subtitle_st;
 
     double frame_timer;
     double frame_last_returned_time;
     double frame_last_filter_delay;
-    int video_stream;
+    /*int video_stream;*/
     AVStream *video_st;
     double max_frame_duration;      // maximum duration of a frame - above this, we consider the jump a timestamp discontinuity
     struct SwsContext *sub_convert_ctx;

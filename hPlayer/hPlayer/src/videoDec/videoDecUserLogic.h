@@ -23,7 +23,7 @@ public:
 	int onLoopEnd() override;
 	int onLoopFrame() override;
     videoDec& getServer(){return m_rvideoDec;}
-
+    logicWorker&  worker() override;
     videoDecLogicState  state ();
     void                setState(videoDecLogicState  st);
     int  initThis();

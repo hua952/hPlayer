@@ -54,7 +54,16 @@ struct globalData
     void   setPaused(bool b);
     double curPlayPos ();
     void   setCurPlayPos (double pos);
+    int  videoStream ();
+    void  setVideoStream (int v);
+    int  audioStream ();
+    void  setAudioStream (int v);
+    int  subtitleStream ();
+    void  setSubtitleStream (int v);
 private:
+    int  m_subtitleStream{-1};
+    int  m_audioStream{-1};
+    int  m_videoStream{-1};
     std::atomic<bool> m_paused{false};
     std::atomic<bool> m_abort{false};
     std::atomic<double> m_curPlayPos;

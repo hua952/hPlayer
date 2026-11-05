@@ -253,6 +253,36 @@ void    globalData:: setCurPlayPos (double pos)
     m_curPlayPos.store(pos, std::memory_order_relaxed);
 }
 
+int  globalData:: videoStream ()
+{
+    return m_videoStream;
+}
+
+void  globalData:: setVideoStream (int v)
+{
+    m_videoStream = v;
+}
+
+int  globalData:: audioStream ()
+{
+    return m_audioStream;
+}
+
+void  globalData:: setAudioStream (int v)
+{
+    m_audioStream = v;
+}
+
+int  globalData:: subtitleStream ()
+{
+    return m_subtitleStream;
+}
+
+void  globalData:: setSubtitleStream (int v)
+{
+    m_subtitleStream = v;
+}
+
 void cpp_sync_clock_to_slave(cppClock& c, cppClock &rSlave)
 {
     double clock = c.getClock ();

@@ -19,6 +19,7 @@ public:
 	int onLoopEnd() override;
 	int onLoopFrame() override;
     main& getServer(){return m_rmain;}
+    logicWorker&  worker() override;
     mainState state();
     void  setState(mainState st);
     

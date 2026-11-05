@@ -254,6 +254,7 @@ static void cleanVideoDec()
 }
 static void stream_component_close(VideoState *is, int stream_index)
 {
+    auto& rGlobal = tSingleton<globalData>::single();
     AVFormatContext *ic = is->ic;
     AVCodecParameters *codecpar;
 
@@ -294,15 +295,18 @@ static void stream_component_close(VideoState *is, int stream_index)
     switch (codecpar->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
         is->audio_st = NULL;
-        is->audio_stream = -1;
+        //is->audio_stream = -1;
+        rGlobal.setAudioStream(-1);
         break;
     case AVMEDIA_TYPE_VIDEO:
         is->video_st = NULL;
-        is->video_stream = -1;
+        // is->video_stream = -1;
+        rGlobal.setVideoStream(-1);
         break;
     case AVMEDIA_TYPE_SUBTITLE:
         is->subtitle_st = NULL;
-        is->subtitle_stream = -1;
+        //is->subtitle_stream = -1;
+        rGlobal.setSubtitleStream (-1);
         break;
     default:
         break;
@@ -314,12 +318,13 @@ void stream_close(VideoState *is)
 {
     /* XXX: use a special url_shutdown call to abort parse cleanly */
         /* close each stream */
-    if (is->audio_stream >= 0)
-        stream_component_close(is, is->audio_stream);
-    if (is->video_stream >= 0)
-        stream_component_close(is, is->video_stream);
-    if (is->subtitle_stream >= 0)
-        stream_component_close(is, is->subtitle_stream);
+    auto& rGlobal = tSingleton<globalData>::single();
+    if (rGlobal.audioStream() >= 0)
+        stream_component_close(is, rGlobal.audioStream());
+    if (rGlobal.videoStream() >= 0)
+        stream_component_close(is, rGlobal.videoStream());
+    if (rGlobal.subtitleStream() >= 0)
+        stream_component_close(is, rGlobal.subtitleStream());
 
     avformat_close_input(&is->ic);
 
@@ -1050,6 +1055,7 @@ void mainUserLogic::refresh_loop_wait_event(VideoState *is, SDL_Event *event) {
 
 int mainUserLogic::ffplay_event_loop()
 {
+    auto& rGlobal = tSingleton<globalData>::single();
     auto cur_stream = getVideoState();
     SDL_Event event;
     double incr, pos, frac;
@@ -1144,9 +1150,9 @@ int mainUserLogic::ffplay_event_loop()
             do_seek:
                     if (seek_by_bytes) {
                         pos = -1;
-                        if (pos < 0 && cur_stream->video_stream >= 0)
+                        if (pos < 0 && rGlobal.videoStream() >= 0)
                             pos = cpp_video_frame_queue_last_pos();
-                        if (pos < 0 && cur_stream->audio_stream >= 0) {
+                        if (pos < 0 && rGlobal.audioStream() >= 0) {
                             pos = cpp_audio_frame_queue_last_pos ();
                             /*pos = frame_queue_last_pos(&cur_stream->sampq);*/
                         }
@@ -1265,5 +1271,10 @@ bool  mainUserLogic:: forceRefresh ()
 void  mainUserLogic:: setForceRefresh (bool v)
 {
     m_forceRefresh = v;
+}
+
+logicWorker& mainUserLogic:: worker()
+{
+    return getServer();
 }
 

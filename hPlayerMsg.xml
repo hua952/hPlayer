@@ -35,5 +35,10 @@
             <ask>
             </ask>
         </initAudio>
+        <setStreamIndex>
+            <ask>
+                <streamIndex dataType="udword"/>
+            </ask>
+        </setStreamIndex>
     </playerData>
 </rpc>

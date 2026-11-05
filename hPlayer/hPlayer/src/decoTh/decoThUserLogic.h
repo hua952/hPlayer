@@ -23,6 +23,7 @@ public:
 	int onLoopEnd() override;
 	int onLoopFrame() override;
     decoTh& getServer(){return m_rdecoTh;}
+    logicWorker&  worker() override;
 
     int initThis();
     readState  state ();
@@ -36,6 +37,7 @@ public:
     bool  pausedCache ();
     void  setPausedCache (bool v);
 private:
+    int  cpp_stream_component_open_base(int stream_index);
     bool  m_pausedCache{false};
     decoTh& m_rdecoTh;
     readState  m_readState {readState_mainNotInit};

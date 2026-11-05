@@ -122,9 +122,9 @@ enum {
 
 typedef struct VideoState {
     const AVInputFormat *iformat;
-    int force_refresh;
+    /*int force_refresh;*/
     /*int paused;*/
-    int last_paused;
+    /*int last_paused;*/
     int queue_attachments_req;
     int seek_req;
     int seek_flags;

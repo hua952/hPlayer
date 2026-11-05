@@ -233,22 +233,22 @@ void    globalData :: setAbort(bool a)
     m_abort.store(a, std::memory_order_relaxed);
 }
 
-bool    cppCom:: paused()
+bool    globalData:: paused()
 {
     return m_paused.load(std::memory_order_relaxed);
 }
 
-void    cppCom:: setPaused(bool b)
+void    globalData:: setPaused(bool b)
 {
     m_paused.store(b, std::memory_order_relaxed);
 }
 
-double  cppCom:: curPlayPos ()
+double  globalData:: curPlayPos ()
 {
     return m_curPlayPos.load(std::memory_order_relaxed);
 }
 
-void    cppCom:: setCurPlayPos (double pos)
+void    globalData:: setCurPlayPos (double pos)
 {
     m_curPlayPos.store(pos, std::memory_order_relaxed);
 }

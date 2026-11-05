@@ -24,8 +24,15 @@ public:
     
     int initThis();
     void       clean();
+    bool  forceRefresh ();
+    void  setForceRefresh (bool v);
 private:
-    int ffplay_event_loop(VideoState *cur_stream);
+    bool  m_forceRefresh{false};
     main& m_rmain;
     mainState   m_mainState = mainState_noWindow;
+private:
+    int ffplay_event_loop();
+    void toggle_audio_display();
+    void refresh_loop_wait_event(VideoState *is, SDL_Event *event);
+    void cpp_video_refresh(void *opaque, double *remaining_time);
 };

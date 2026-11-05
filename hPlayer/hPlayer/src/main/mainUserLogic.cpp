@@ -20,15 +20,6 @@ static double vp_duration(VideoState *is, cppFrame *vp, cppFrame *nextvp) {
     }
 }
 
-static void step_to_next_frame(VideoState *is)
-{
-    /* if the stream is paused unpause it, then step */
-    auto& rGlobal = tSingleton<globalData>::single();
-    if (rGlobal.paused())
-        cpp_stream_toggle_pause(is);
-    is->step = 1;
-}
-
 extern "C"
 {
 void cpp_stream_toggle_pause(VideoState *is);
@@ -455,14 +446,16 @@ static void toggle_full_screen(VideoState *is)
     SDL_SetWindowFullscreen(window, is_full_screen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 }
 
-static void toggle_audio_display(VideoState *is)
+void mainUserLogic::toggle_audio_display()
 {
+    auto is = getVideoState();
     int next = is->show_mode;
     do {
         next = (next + 1) % VideoState::SHOW_MODE_NB;
     } while (next != is->show_mode && (next == VideoState::SHOW_MODE_VIDEO && !is->video_st || next != VideoState::SHOW_MODE_VIDEO && !is->audio_st));
     if (is->show_mode != next) {
-        is->force_refresh = 1;
+        setForceRefresh(true);
+        // is->force_refresh = 1;
         is->show_mode = (VideoState::ShowMode)next;
     }
 }
@@ -556,6 +549,16 @@ void cpp_stream_toggle_pause(VideoState *is)
 }
 }
 
+static void step_to_next_frame(VideoState *is)
+{
+    /* if the stream is paused unpause it, then step */
+    auto& rGlobal = tSingleton<globalData>::single();
+    if (rGlobal.paused())
+        cpp_stream_toggle_pause(is);
+    is->step = 1;
+}
+
+
 mainUserLogic::mainUserLogic (main& rServer):m_rmain(rServer)
 {
 
@@ -590,7 +593,7 @@ int mainUserLogic::onLoopFrame()
             nRet = procPacketFunRetType_exitAfterLoop;
             break;
         }
-        auto nR = ffplay_event_loop (getVideoState());
+        auto nR = ffplay_event_loop ();
         if (nR) {
             rGlobal.setAbort(true);
             // readPackExitNtfAskMsg msg;
@@ -827,7 +830,7 @@ static void video_display(VideoState *is)
 }
 
 
-static void cpp_video_refresh(void *opaque, double *remaining_time)
+void mainUserLogic::cpp_video_refresh(void *opaque, double *remaining_time)
 {
     VideoState *is = (VideoState *)opaque;
     double time;
@@ -850,7 +853,7 @@ static void cpp_video_refresh(void *opaque, double *remaining_time)
 
     if (!display_disable && is->show_mode != VideoState::SHOW_MODE_VIDEO && is->audio_st) {
         time = av_gettime_relative() / 1000000.0;
-        if (is->force_refresh || is->last_vis_time + rdftspeed < time) {
+        if (forceRefresh() || is->last_vis_time + rdftspeed < time) {
             video_display(is);
             is->last_vis_time = time;
         }
@@ -957,18 +960,19 @@ retry:
 
             // frame_queue_next(&is->pictq);
             rPictQ.popFrame();
-            is->force_refresh = 1;
-
+            //is->force_refresh = 1;
+            setForceRefresh (true);
             if (is->step && !rGlobal.paused())
                 cpp_stream_toggle_pause(is);
         }
 display:
         /* display picture */
         // if (!display_disable && is->force_refresh && is->show_mode == VideoState::SHOW_MODE_VIDEO && is->pictq.rindex_shown)
-        if (!display_disable && is->force_refresh && is->show_mode == VideoState::SHOW_MODE_VIDEO && rPictQ.haveLastFrame())
+        if (!display_disable && forceRefresh() && is->show_mode == VideoState::SHOW_MODE_VIDEO && rPictQ.haveLastFrame())
             video_display(is);
     }
-    is->force_refresh = 0;
+    // is->force_refresh = 0;
+    setForceRefresh(false);
     if (show_status) {
         AVBPrint buf;
         static int64_t last_time;
@@ -1023,7 +1027,7 @@ display:
     }
 }
 
-static void refresh_loop_wait_event(VideoState *is, SDL_Event *event) {
+void mainUserLogic::refresh_loop_wait_event(VideoState *is, SDL_Event *event) {
     double remaining_time = 0.0;
     auto& rGlobal = tSingleton<globalData>::single();
 
@@ -1036,7 +1040,7 @@ static void refresh_loop_wait_event(VideoState *is, SDL_Event *event) {
         if (remaining_time > 0.0)
             av_usleep((int64_t)(remaining_time * 1000000.0));
         remaining_time = REFRESH_RATE;
-        if (is->show_mode != VideoState::SHOW_MODE_NONE && (!rGlobal.paused() || is->force_refresh))
+        if (is->show_mode != VideoState::SHOW_MODE_NONE && (!rGlobal.paused() || forceRefresh()))
             cpp_video_refresh(is, &remaining_time);
         SDL_PumpEvents();
     }
@@ -1044,8 +1048,9 @@ static void refresh_loop_wait_event(VideoState *is, SDL_Event *event) {
 
 }
 
-int mainUserLogic::ffplay_event_loop(VideoState *cur_stream)
+int mainUserLogic::ffplay_event_loop()
 {
+    auto cur_stream = getVideoState();
     SDL_Event event;
     double incr, pos, frac;
     int nRet = 0;
@@ -1066,7 +1071,8 @@ int mainUserLogic::ffplay_event_loop(VideoState *cur_stream)
             switch (event.key.keysym.sym) {
             case SDLK_f:
                 toggle_full_screen(cur_stream);
-                cur_stream->force_refresh = 1;
+                // cur_stream->force_refresh = 1;
+                setForceRefresh(true);
                 break;
             case SDLK_p:
             case SDLK_SPACE:
@@ -1107,7 +1113,7 @@ int mainUserLogic::ffplay_event_loop(VideoState *cur_stream)
                         cur_stream->vfilter_idx = 0;
                 } else {
                     cur_stream->vfilter_idx = 0;
-                    toggle_audio_display(cur_stream);
+                    toggle_audio_display();
                 }
                 break;
             case SDLK_PAGEUP:
@@ -1176,7 +1182,8 @@ int mainUserLogic::ffplay_event_loop(VideoState *cur_stream)
                 static int64_t last_mouse_left_click = 0;
                 if (av_gettime_relative() - last_mouse_left_click <= 500000) {
                     toggle_full_screen(cur_stream);
-                    cur_stream->force_refresh = 1;
+                    // cur_stream->force_refresh = 1;
+                    setForceRefresh(true);
                     last_mouse_left_click = 0;
                 } else {
                     last_mouse_left_click = av_gettime_relative();
@@ -1234,7 +1241,8 @@ int mainUserLogic::ffplay_event_loop(VideoState *cur_stream)
                     if (vk_renderer)
                         vk_renderer_resize(vk_renderer, screen_width, screen_height);
                 case SDL_WINDOWEVENT_EXPOSED:
-                    cur_stream->force_refresh = 1;
+                    // cur_stream->force_refresh = 1;
+                    setForceRefresh(true);
             }
             break;
         case SDL_QUIT:
@@ -1248,3 +1256,14 @@ int mainUserLogic::ffplay_event_loop(VideoState *cur_stream)
     } while(0);
     return nRet;
 }
+
+bool  mainUserLogic:: forceRefresh ()
+{
+    return m_forceRefresh;
+}
+
+void  mainUserLogic:: setForceRefresh (bool v)
+{
+    m_forceRefresh = v;
+}
+

@@ -7,7 +7,6 @@
             <server>
                 <main mainLoop="1">
                     <procRpc>
-                        <seekPos askType="ret"/>
                         <playURL askType="ret"/>
                     </procRpc>
                 </main>

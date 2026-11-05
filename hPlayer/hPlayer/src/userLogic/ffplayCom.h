@@ -121,7 +121,7 @@ enum {
 };
 
 typedef struct VideoState {
-    const AVInputFormat *iformat;
+    /*const AVInputFormat *iformat;*/
     /*int force_refresh;*/
     /*int paused;*/
     /*int last_paused;*/
@@ -287,7 +287,7 @@ int get_video_frame(VideoState *is, AVFrame *frame);
 int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format);
 /*int create_hwaccel(AVBufferRef **device_ctx);*/
 void set_default_window_size(int width, int height, AVRational sar);
-int is_realtime(AVFormatContext *s);
+/*int is_realtime(AVFormatContext *s);*/
 void stream_seek(VideoState *is, int64_t pos, int64_t rel, int by_bytes);
 
 int get_master_sync_type(VideoState *is);

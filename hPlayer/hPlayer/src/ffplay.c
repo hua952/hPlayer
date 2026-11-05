@@ -586,22 +586,6 @@ end:
     return ret;
 }
 
-int is_realtime(AVFormatContext *s)
-{
-    if(   !strcmp(s->iformat->name, "rtp")
-       || !strcmp(s->iformat->name, "rtsp")
-       || !strcmp(s->iformat->name, "sdp")
-    )
-        return 1;
-
-    if(s->pb && (   !strncmp(s->url, "rtp:", 4)
-                 || !strncmp(s->url, "udp:", 4)
-                )
-    )
-        return 1;
-    return 0;
-}
-
 static int dummy;
 static int opt_width(void *optctx, const char *opt, const char *arg)
 {
@@ -810,8 +794,8 @@ VideoState* getVideoState()
 }
 /* Called from the main */
 
-static VideoState *stream_open(const char *filename,
-                               const AVInputFormat *iformat)
+static VideoState *stream_open(const char *filename/*,
+                               const AVInputFormat *iformat*/)
 {
     VideoState *is;
 
@@ -824,7 +808,7 @@ static VideoState *stream_open(const char *filename,
     is->filename = av_strdup(filename);
     if (!is->filename)
         goto fail;
-    is->iformat = iformat;
+    /*is->iformat = iformat;*/
     is->ytop    = 0;
     is->xleft   = 0;
 
@@ -901,7 +885,6 @@ int ffplayMain(int argc, char **argv)
     signal(SIGTERM, sigterm_handler); /* Termination (ANSI).  */
 
     show_banner(argc, argv, options);
-
     ret = parse_options(NULL, argc, argv, options, opt_input_file);
     if (ret < 0)
         exit(ret == AVERROR_EXIT ? 0 : 1);
@@ -1008,7 +991,7 @@ int ffplayMain(int argc, char **argv)
         }
     }
 
-    sVS = stream_open(input_filename, file_iformat);
+    sVS = stream_open(input_filename/*, file_iformat*/);
     if (!sVS) {
         av_log(NULL, AV_LOG_FATAL, "Failed to initialize VideoState!\n");
         do_exit(NULL);

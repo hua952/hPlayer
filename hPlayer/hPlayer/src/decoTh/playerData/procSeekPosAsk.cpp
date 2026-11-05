@@ -11,12 +11,12 @@
 
 #include "playerDataRpc.h"
 
-static int sprocSeekPosAsk (decoThUserLogic& rLogic, decoTh& rServer, const seekPosAsk& rAsk , seekPosRet& rRet)
+static int sprocSeekPosAsk (decoThUserLogic& rLogic, decoTh& rServer, const seekPosAsk& rAsk )
 {
 	gInfo("Rec procSeekPosAsk");
     return procPacketFunRetType_del;
 }
-int  decoTh::procSeekPosAsk (const seekPosAsk& rAsk , seekPosRet& rRet)
+int  decoTh::procSeekPosAsk (const seekPosAsk& rAsk )
 {
-    return sprocSeekPosAsk(*(dynamic_cast<decoThUserLogic*>(getIUserLogicWorker ())), *this,rAsk, rRet);
+    return sprocSeekPosAsk(*(dynamic_cast<decoThUserLogic*>(getIUserLogicWorker ())), *this,rAsk);
 }

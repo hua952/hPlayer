@@ -3,6 +3,7 @@
 #include "gLog.h"
 #include "cppCom.h"
 #include "tSingleton.h"
+#include "hPlayerConfig.h"
 
 extern "C"
 {
@@ -827,11 +828,29 @@ static int decode_interrupt_cb(void *ctx)
     return rGlobal.abort();
 }
 
+static int is_realtime(AVFormatContext *s)
+{
+    if(   !strcmp(s->iformat->name, "rtp")
+       || !strcmp(s->iformat->name, "rtsp")
+       || !strcmp(s->iformat->name, "sdp")
+    )
+        return 1;
+
+    if(s->pb && (   !strncmp(s->url, "rtp:", 4)
+                 || !strncmp(s->url, "udp:", 4)
+                )
+    )
+        return 1;
+    return 0;
+}
+
 int  decoThUserLogic:: initThis()
 {
     int  nRet = 0;
-    do {
+    const auto& rConfig = tSingleton<hPlayerConfig>::single();
 
+    do {
+        
         VideoState *is = getVideoState();
         auto& ic = m_ic;
         int& ret = m_ret;
@@ -881,7 +900,12 @@ int  decoThUserLogic:: initThis()
             av_dict_set(&format_opts, "scan_all_pmts", "1", AV_DICT_DONT_OVERWRITE);
             scan_all_pmts_set = 1;
         }
-        err = avformat_open_input(&ic, is->filename, is->iformat, &format_opts);
+        const AVInputFormat*file_iformat {nullptr};
+        auto arg = rConfig.iformat();
+        if(arg){
+            file_iformat = av_find_input_format(arg);
+        }
+        err = avformat_open_input(&ic, is->filename, file_iformat, &format_opts);
         if (err < 0) {
             print_error(is->filename, err);
             ret = -1;

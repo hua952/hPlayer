@@ -18,6 +18,7 @@ public:
         videoDecLogicState_willExit,
         videoDecLogicState_ok
     };
+    int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame);
     videoDecUserLogic (videoDec& rServer);
 	int onLoopBegin() override;
 	int onLoopEnd() override;
@@ -28,7 +29,13 @@ public:
     void                setState(videoDecLogicState  st);
     int  initThis();
     void  clean();
+    AVFilterContext*  in_video_filter ();
+    void  setIn_video_filter (AVFilterContext* v);
+    AVFilterContext*  out_video_filter ();
+    void  setOut_video_filter (AVFilterContext* v);
 private:
+    AVFilterContext*  m_out_video_filter{nullptr};
+    AVFilterContext*  m_in_video_filter{nullptr};
     AVFrame* m_frame {nullptr};
     AVFilterGraph* m_graph {nullptr};
     AVRational m_frame_rate;

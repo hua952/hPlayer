@@ -125,6 +125,12 @@ const struct TextureFormatEntry sdl_texture_format_map[] = {
     { AV_PIX_FMT_UYVY422,        SDL_PIXELFORMAT_UYVY },
 };
 
+
+struct TextureFormatEntry*  getFormatEntry(int* num)
+{
+    *num = FF_ARRAY_ELEMS(sdl_texture_format_map);
+    return sdl_texture_format_map;
+}
 /*void cleanVideoDec();*/
 
 static int opt_add_vfilter(void *optctx, const char *opt, const char *arg)
@@ -254,12 +260,6 @@ int upload_texture(SDL_Texture **tex, AVFrame *frame)
     return ret;
 }
 
-static enum AVColorSpace sdl_supported_color_spaces[] = {
-    AVCOL_SPC_BT709,
-    AVCOL_SPC_BT470BG,
-    AVCOL_SPC_SMPTE170M,
-};
-
 void set_sdl_yuv_conversion_mode(AVFrame *frame)
 {
 #if SDL_VERSION_ATLEAST(2,0,8)
@@ -293,7 +293,7 @@ void set_default_window_size(int width, int height, AVRational sar)
     default_width  = rect.w;
     default_height = rect.h;
 }
-
+/*
 int get_master_sync_type(VideoState *is)
 {
     if (is->av_sync_type == AV_SYNC_VIDEO_MASTER) {
@@ -310,7 +310,7 @@ int get_master_sync_type(VideoState *is)
         return AV_SYNC_EXTERNAL_CLOCK;
     }
 }
-
+*/
 /* seek in the stream */
 void stream_seek(VideoState *is, int64_t pos, int64_t rel, int by_bytes)
 {
@@ -325,7 +325,7 @@ void stream_seek(VideoState *is, int64_t pos, int64_t rel, int by_bytes)
     }
 }
 
-static int configure_filtergraph(AVFilterGraph *graph, const char *filtergraph,
+int configure_filtergraph(AVFilterGraph *graph, const char *filtergraph,
                                  AVFilterContext *source_ctx, AVFilterContext *sink_ctx)
 {
     int ret, i;
@@ -367,7 +367,7 @@ fail:
     avfilter_inout_free(&inputs);
     return ret;
 }
-
+/*
 int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame)
 {
     enum AVPixelFormat pix_fmts[FF_ARRAY_ELEMS(sdl_texture_format_map)];
@@ -451,8 +451,6 @@ int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vf
 
     last_filter = filt_out;
 
-/* Note: this macro adds a filter before the lastly added filter, so the
- * processing order of the filters is in reverse */
 #define INSERT_FILT(name, arg) do {                                          \
     AVFilterContext *filt_ctx;                                               \
                                                                              \
@@ -513,6 +511,7 @@ fail:
     av_freep(&par);
     return ret;
 }
+*/
 
 int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format)
 {

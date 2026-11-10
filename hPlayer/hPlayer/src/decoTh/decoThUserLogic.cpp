@@ -67,7 +67,7 @@ static int synchronize_audio(VideoState *is, int nb_samples)
     int wanted_nb_samples = nb_samples;
 
     /* if not master, then we try to remove or add samples to correct the clock */
-    if (get_master_sync_type(is) != AV_SYNC_AUDIO_MASTER) {
+    if (cpp_get_master_sync_type(is) != AV_SYNC_AUDIO_MASTER) {
         double diff, avg_diff;
         int min_nb_samples, max_nb_samples;
 
@@ -568,8 +568,8 @@ int  decoThUserLogic:: cpp_stream_component_open_base(int stream_index)
             pU->m_streamIndex = stream_index;
             rWork.sendMsg(msg, hPlayerServerTmpID_videoDec);
         }
-        is->video_st = ic->streams[stream_index];
-
+        //is->video_st = ic->streams[stream_index];
+        rGlobal.setVideoSt(ic->streams[stream_index]);
         if ((ret = cpp_decoder_init(rGlobal.vidDec, avctx, &rGlobal.vidPackQ)) < 0)
             goto fail;
         rGlobal.vidPackQ.start();
@@ -689,8 +689,8 @@ int decoThUserLogic::onLoopFrame()
                 */
         }
         if (is->queue_attachments_req) {
-            if (is->video_st && is->video_st->disposition & AV_DISPOSITION_ATTACHED_PIC) {
-                if ((ret = av_packet_ref(pkt, &is->video_st->attached_pic)) < 0) {
+            if (rGlobal.videoSt() && rGlobal.videoSt()->disposition & AV_DISPOSITION_ATTACHED_PIC) {
+                if ((ret = av_packet_ref(pkt, &rGlobal.videoSt()->attached_pic)) < 0) {
                     // sendExitNtfToSub();
                     rGlobal.setAbort(true);
                     break;
@@ -729,7 +729,7 @@ int decoThUserLogic::onLoopFrame()
             // (!is->audio_st || (is->auddec.finished == is->audioq.serial && frame_queue_nb_remaining(&is->sampq) == 0)) &&
             (!is->audio_st || (rAudDec.finished == rAudioPackQ.serial() && rSampQ.size() == 0)) &&
             // (!is->video_st || (is->viddec.finished == is->videoq.serial && frame_queue_nb_remaining(&is->pictq) == 0))) {
-            (!is->video_st || (rDecoder.finished == rVidPackQ.serial() && rPictQ.size() == 0))) {
+            (!rGlobal.videoSt() || (rDecoder.finished == rVidPackQ.serial() && rPictQ.size() == 0))) {
             if (loop != 1 && (!loop || --loop)) {
                 stream_seek(is, start_time != AV_NOPTS_VALUE ? start_time : 0, 0, 0);
             } else if (autoexit) {
@@ -816,7 +816,7 @@ int decoThUserLogic::onLoopFrame()
             // packet_queue_put(&is->audioq, pkt);
             rAudioPackQ.pushPack (pkt);
         } else if (pkt->stream_index == rGlobal.videoStream() && pkt_in_play_range
-                   && !(is->video_st->disposition & AV_DISPOSITION_ATTACHED_PIC)) {
+                   && !(rGlobal.videoSt()->disposition & AV_DISPOSITION_ATTACHED_PIC)) {
             // packet_queue_put(&is->videoq, pkt);
             rVidPackQ.pushPack (pkt);
         } else if (pkt->stream_index == rGlobal.subtitleStream() && pkt_in_play_range) {

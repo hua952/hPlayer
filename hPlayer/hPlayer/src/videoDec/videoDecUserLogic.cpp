@@ -3,6 +3,167 @@
 #include "playerDataRpc.h"
 #include "cppCom.h"
 #include "tSingleton.h"
+#include <memory>
+
+static enum AVColorSpace sdl_supported_color_spaces[] = {
+    AVCOL_SPC_BT709,
+    AVCOL_SPC_BT470BG,
+    AVCOL_SPC_SMPTE170M,
+};
+
+
+int videoDecUserLogic::configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame)
+{
+    auto& rGlobal = tSingleton<globalData>::single();
+    int enterNum = 0;
+    auto entryMap = getFormatEntry(&enterNum);
+    auto pix_fmts_ptr = std::make_unique<enum AVPixelFormat []>(enterNum);
+    auto pix_fmts = pix_fmts_ptr.get();
+    //enum AVPixelFormat pix_fmts[FF_ARRAY_ELEMS(sdl_texture_format_map)];
+    char sws_flags_str[512] = "";
+    int ret;
+    AVFilterContext *filt_src = NULL, *filt_out = NULL, *last_filter = NULL;
+    AVCodecParameters *codecpar = rGlobal.videoSt()->codecpar;
+    AVRational fr = av_guess_frame_rate(is->ic, rGlobal.videoSt(), NULL);
+    const AVDictionaryEntry *e = NULL;
+    int nb_pix_fmts = 0;
+    int i, j;
+    AVBufferSrcParameters *par = av_buffersrc_parameters_alloc();
+
+    if (!par)
+        return AVERROR(ENOMEM);
+
+    for (i = 0; i < renderer_info.num_texture_formats; i++) {
+        for (j = 0; j < enterNum; j++) {
+            if (renderer_info.texture_formats[i] == sdl_texture_format_map[j].texture_fmt) {
+                pix_fmts[nb_pix_fmts++] = sdl_texture_format_map[j].format;
+                break;
+            }
+        }
+    }
+
+    while ((e = av_dict_iterate(sws_dict, e))) {
+        if (!strcmp(e->key, "sws_flags")) {
+            av_strlcatf(sws_flags_str, sizeof(sws_flags_str), "%s=%s:", "flags", e->value);
+        } else
+            av_strlcatf(sws_flags_str, sizeof(sws_flags_str), "%s=%s:", e->key, e->value);
+    }
+    if (strlen(sws_flags_str))
+        sws_flags_str[strlen(sws_flags_str)-1] = '\0';
+
+    graph->scale_sws_opts = av_strdup(sws_flags_str);
+
+
+    filt_src = avfilter_graph_alloc_filter(graph, avfilter_get_by_name("buffer"),
+                                           "ffplay_buffer");
+    if (!filt_src) {
+        ret = AVERROR(ENOMEM);
+        goto fail;
+    }
+
+    par->format              = frame->format;
+    par->time_base           = rGlobal.videoSt()->time_base;
+    par->width               = frame->width;
+    par->height              = frame->height;
+    par->sample_aspect_ratio = codecpar->sample_aspect_ratio;
+    par->color_space         = frame->colorspace;
+    par->color_range         = frame->color_range;
+    par->frame_rate          = fr;
+    par->hw_frames_ctx = frame->hw_frames_ctx;
+    ret = av_buffersrc_parameters_set(filt_src, par);
+    if (ret < 0)
+        goto fail;
+
+    ret = avfilter_init_dict(filt_src, NULL);
+    if (ret < 0)
+        goto fail;
+
+    filt_out = avfilter_graph_alloc_filter(graph, avfilter_get_by_name("buffersink"),
+                                           "ffplay_buffersink");
+    if (!filt_out) {
+        ret = AVERROR(ENOMEM);
+        goto fail;
+    }
+
+    if ((ret = av_opt_set_array(filt_out, "pixel_formats", AV_OPT_SEARCH_CHILDREN,
+                                0, nb_pix_fmts, AV_OPT_TYPE_PIXEL_FMT, pix_fmts)) < 0)
+        goto fail;
+    if (!vk_renderer &&
+        (ret = av_opt_set_array(filt_out, "colorspaces", AV_OPT_SEARCH_CHILDREN,
+                                0, FF_ARRAY_ELEMS(sdl_supported_color_spaces),
+                                AV_OPT_TYPE_INT, sdl_supported_color_spaces)) < 0)
+        goto fail;
+
+    ret = avfilter_init_dict(filt_out, NULL);
+    if (ret < 0)
+        goto fail;
+
+    last_filter = filt_out;
+
+/* Note: this macro adds a filter before the lastly added filter, so the
+ * processing order of the filters is in reverse */
+#define INSERT_FILT(name, arg) do {                                          \
+    AVFilterContext *filt_ctx;                                               \
+                                                                             \
+    ret = avfilter_graph_create_filter(&filt_ctx,                            \
+                                       avfilter_get_by_name(name),           \
+                                       "ffplay_" name, arg, NULL, graph);    \
+    if (ret < 0)                                                             \
+        goto fail;                                                           \
+                                                                             \
+    ret = avfilter_link(filt_ctx, 0, last_filter, 0);                        \
+    if (ret < 0)                                                             \
+        goto fail;                                                           \
+                                                                             \
+    last_filter = filt_ctx;                                                  \
+} while (0)
+
+    if (autorotate) {
+        double theta = 0.0;
+        int32_t *displaymatrix = NULL;
+        AVFrameSideData *sd = av_frame_get_side_data(frame, AV_FRAME_DATA_DISPLAYMATRIX);
+        if (sd)
+            displaymatrix = (int32_t *)sd->data;
+        if (!displaymatrix) {
+            const AVPacketSideData *psd = av_packet_side_data_get(rGlobal.videoSt()->codecpar->coded_side_data,
+                                                                  rGlobal.videoSt()->codecpar->nb_coded_side_data,
+                                                                  AV_PKT_DATA_DISPLAYMATRIX);
+            if (psd)
+                displaymatrix = (int32_t *)psd->data;
+        }
+        theta = get_rotation(displaymatrix);
+
+        if (fabs(theta - 90) < 1.0) {
+            INSERT_FILT("transpose", displaymatrix[3] > 0 ? "cclock_flip" : "clock");
+        } else if (fabs(theta - 180) < 1.0) {
+            if (displaymatrix[0] < 0)
+                INSERT_FILT("hflip", NULL);
+            if (displaymatrix[4] < 0)
+                INSERT_FILT("vflip", NULL);
+        } else if (fabs(theta - 270) < 1.0) {
+            INSERT_FILT("transpose", displaymatrix[3] < 0 ? "clock_flip" : "cclock");
+        } else if (fabs(theta) > 1.0) {
+            char rotate_buf[64];
+            snprintf(rotate_buf, sizeof(rotate_buf), "%f*PI/180", theta);
+            INSERT_FILT("rotate", rotate_buf);
+        } else {
+            if (displaymatrix && displaymatrix[4] < 0)
+                INSERT_FILT("vflip", NULL);
+        }
+    }
+
+    if ((ret = configure_filtergraph(graph, vfilters, filt_src, last_filter)) < 0)
+        goto fail;
+
+    // is->in_video_filter  = filt_src;
+    // is->out_video_filter = filt_out;
+    setIn_video_filter (filt_src);
+    setOut_video_filter (filt_out);
+fail:
+    av_freep(&par);
+    return ret;
+}
+
 
 videoDecUserLogic::videoDecUserLogic (videoDec& rServer):m_rvideoDec(rServer)
 {
@@ -26,11 +187,12 @@ int   videoDecUserLogic:: initThis()
     int   nRet = 0;
     do {
         VideoState *is = getVideoState ();
+        auto& rGlobal = tSingleton<globalData>::single();
         auto& frame = m_frame;
         AVRational& frame_rate = m_frame_rate;
 
         frame = av_frame_alloc();
-        frame_rate = av_guess_frame_rate(is->ic, is->video_st, NULL);
+        frame_rate = av_guess_frame_rate(is->ic, rGlobal.videoSt(), NULL);
         if (!frame) {
             nRet = procPacketFunRetType_exitNow;
             break;
@@ -55,11 +217,11 @@ int cpp_get_video_frame(VideoState *is, AVFrame *frame)
         double dpts = NAN;
 
         if (frame->pts != AV_NOPTS_VALUE)
-            dpts = av_q2d(is->video_st->time_base) * frame->pts;
+            dpts = av_q2d(rGlobal.videoSt()->time_base) * frame->pts;
 
-        frame->sample_aspect_ratio = av_guess_sample_aspect_ratio(is->ic, is->video_st, frame);
+        frame->sample_aspect_ratio = av_guess_sample_aspect_ratio(is->ic, rGlobal.videoSt(), frame);
 
-        if (framedrop>0 || (framedrop && get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER)) {
+        if (framedrop>0 || (framedrop && cpp_get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER)) {
             if (frame->pts != AV_NOPTS_VALUE) {
                 double diff = dpts - cpp_get_master_clock(is);
                 if (!isnan(diff) && fabs(diff) < AV_NOSYNC_THRESHOLD &&
@@ -169,8 +331,8 @@ int videoDecUserLogic::onLoopFrame()
                 rGlobal.setAbort(true);
                 break;
             }
-            filt_in  = is->in_video_filter;
-            filt_out = is->out_video_filter;
+            filt_in  = in_video_filter (); //is->in_video_filter;
+            filt_out = out_video_filter (); //is->out_video_filter;
             last_w = frame->width;
             last_h = frame->height;
             last_format = (enum AVPixelFormat)frame->format;
@@ -267,6 +429,26 @@ void videoDecUserLogic:: setState(videoDecLogicState  st)
 logicWorker& videoDecUserLogic:: worker()
 {
     return getServer();
+}
+
+AVFilterContext*  videoDecUserLogic:: in_video_filter ()
+{
+    return m_in_video_filter;
+}
+
+void  videoDecUserLogic:: setIn_video_filter (AVFilterContext* v)
+{
+    m_in_video_filter = v;
+}
+
+AVFilterContext*  videoDecUserLogic:: out_video_filter ()
+{
+    return m_out_video_filter;
+}
+
+void  videoDecUserLogic:: setOut_video_filter (AVFilterContext* v)
+{
+    m_out_video_filter = v;
 }
 
 /*

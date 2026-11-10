@@ -185,8 +185,9 @@ typedef struct VideoState {
     double frame_timer;
     double frame_last_returned_time;
     double frame_last_filter_delay;
-    /*int video_stream;*/
+    /*int video_stream;
     AVStream *video_st;
+    */
     double max_frame_duration;      // maximum duration of a frame - above this, we consider the jump a timestamp discontinuity
     struct SwsContext *sub_convert_ctx;
     int eof;
@@ -196,8 +197,8 @@ typedef struct VideoState {
     int step;
 
     int vfilter_idx;
-    AVFilterContext *in_video_filter;   // the first filter in the video chain
-    AVFilterContext *out_video_filter;  // the last filter in the video chain
+    // AVFilterContext *in_video_filter;   // the first filter in the video chain
+    // AVFilterContext *out_video_filter;  // the last filter in the video chain
     AVFilterContext *in_audio_filter;   // the first filter in the audio chain
     AVFilterContext *out_audio_filter;  // the last filter in the audio chain
     AVFilterGraph *agraph;              // audio filter graph
@@ -281,7 +282,7 @@ void do_exit(VideoState *is);
 /*void step_to_next_frame(VideoState *is);*/
 int cmp_audio_fmts(enum AVSampleFormat fmt1, int64_t channel_count1,
                    enum AVSampleFormat fmt2, int64_t channel_count2);
-int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame);
+/*int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame);*/
 int get_video_frame(VideoState *is, AVFrame *frame);
 
 int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format);
@@ -290,7 +291,7 @@ void set_default_window_size(int width, int height, AVRational sar);
 /*int is_realtime(AVFormatContext *s);*/
 void stream_seek(VideoState *is, int64_t pos, int64_t rel, int by_bytes);
 
-int get_master_sync_type(VideoState *is);
+/*int get_master_sync_type(VideoState *is);*/
 /*void video_display(VideoState *is);*/
 void calculate_display_rect(SDL_Rect *rect,
                                    int scr_xleft, int scr_ytop, int scr_width, int scr_height,
@@ -298,4 +299,8 @@ void calculate_display_rect(SDL_Rect *rect,
 void set_sdl_yuv_conversion_mode(AVFrame *frame);
 int upload_texture(SDL_Texture **tex, AVFrame *frame);
 int realloc_texture(SDL_Texture **texture, Uint32 new_format, int new_width, int new_height, SDL_BlendMode blendmode, int init_texture);
+struct TextureFormatEntry*  getFormatEntry(int* num);
+int configure_filtergraph(AVFilterGraph *graph, const char *filtergraph,
+                                 AVFilterContext *source_ctx, AVFilterContext *sink_ctx);
+
 #endif

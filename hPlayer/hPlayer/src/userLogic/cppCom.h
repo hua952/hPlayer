@@ -60,7 +60,10 @@ struct globalData
     void  setAudioStream (int v);
     int  subtitleStream ();
     void  setSubtitleStream (int v);
+    AVStream*  videoSt ();
+    void  setVideoSt (AVStream* v);
 private:
+    AVStream*  m_videoSt{nullptr};
     int  m_subtitleStream{-1};
     int  m_audioStream{-1};
     int  m_videoStream{-1};
@@ -75,11 +78,12 @@ void cpp_decoder_destroy(cppDecoder& rD);
 void cpp_check_external_clock_speed(VideoState *is);
 /*void cpp_video_refresh(void *opaque, double *remaining_time);*/
 double cpp_get_master_clock(VideoState *is);
-// double cpp_compute_target_delay(double delay, VideoState *is);
+/* double cpp_compute_target_delay(double delay, VideoState *is);*/
 int cpp_queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial);
 }
 
 int cpp_decoder_decode_frame(cppDecoder& rD, AVFrame *frame, AVSubtitle *sub);
 void cpp_sync_clock_to_slave(cppClock&c, cppClock &rSlave);
 
+int cpp_get_master_sync_type(VideoState *is);
 #endif

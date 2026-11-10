@@ -299,8 +299,9 @@ static void stream_component_close(VideoState *is, int stream_index)
         rGlobal.setAudioStream(-1);
         break;
     case AVMEDIA_TYPE_VIDEO:
-        is->video_st = NULL;
+        //is->video_st = NULL;
         // is->video_stream = -1;
+        rGlobal.setVideoSt(nullptr);
         rGlobal.setVideoStream(-1);
         break;
     case AVMEDIA_TYPE_SUBTITLE:
@@ -453,11 +454,12 @@ static void toggle_full_screen(VideoState *is)
 
 void mainUserLogic::toggle_audio_display()
 {
+    auto& rGlobal = tSingleton<globalData>::single();
     auto is = getVideoState();
     int next = is->show_mode;
     do {
         next = (next + 1) % VideoState::SHOW_MODE_NB;
-    } while (next != is->show_mode && (next == VideoState::SHOW_MODE_VIDEO && !is->video_st || next != VideoState::SHOW_MODE_VIDEO && !is->audio_st));
+    } while (next != is->show_mode && (next == VideoState::SHOW_MODE_VIDEO && !rGlobal.videoSt() || next != VideoState::SHOW_MODE_VIDEO && !is->audio_st));
     if (is->show_mode != next) {
         setForceRefresh(true);
         // is->force_refresh = 1;
@@ -499,7 +501,7 @@ static double cpp_compute_target_delay(double delay, VideoState *is)
     auto& rVidClk = rGlobal.vidClk;
 
     /* update delay to follow master synchronisation source */
-    if (get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER) {
+    if (cpp_get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER) {
         /* if video is slave, we try to correct big delays by
            duplicating or deleting a frame */
         // diff = get_clock(&is->vidclk) - cpp_get_master_clock(is);
@@ -654,7 +656,7 @@ static double compute_target_delay(double delay, VideoState *is)
     auto& rGlobal = tSingleton<globalData>::single();
     auto& rVidClk = rGlobal.vidClk;
     /* update delay to follow master synchronisation source */
-    if (get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER) {
+    if (cpp_get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER) {
         /* if video is slave, we try to correct big delays by
            duplicating or deleting a frame */
         diff = rVidClk.getClock() - cpp_get_master_clock(is);
@@ -822,6 +824,7 @@ static int video_open(VideoState *is)
 /* display the current picture, if any */
 static void video_display(VideoState *is)
 {
+    auto& rGlobal = tSingleton<globalData>::single();
     if (!is->width)
         video_open(is);
 
@@ -829,7 +832,7 @@ static void video_display(VideoState *is)
     SDL_RenderClear(renderer);
     if (is->audio_st && is->show_mode != VideoState::SHOW_MODE_VIDEO)
         video_audio_display(is);
-    else if (is->video_st)
+    else if (rGlobal.videoSt())
         cpp_video_image_display(is);
     SDL_RenderPresent(renderer);
 }
@@ -851,7 +854,7 @@ void mainUserLogic::cpp_video_refresh(void *opaque, double *remaining_time)
     auto& rSubPackQ = rGlobal.m_subPackQ;
 
     cppFrame *sp, *sp2;
-    if (!rGlobal.paused() && get_master_sync_type(is) == AV_SYNC_EXTERNAL_CLOCK && is->realtime) {
+    if (!rGlobal.paused() && cpp_get_master_sync_type(is) == AV_SYNC_EXTERNAL_CLOCK && is->realtime) {
         /*check_external_clock_speed(is);*/
         cpp_check_external_clock_speed(is);
     }
@@ -865,7 +868,7 @@ void mainUserLogic::cpp_video_refresh(void *opaque, double *remaining_time)
         *remaining_time = FFMIN(*remaining_time, is->last_vis_time + rdftspeed - time);
     }
 
-    if (is->video_st) {
+    if (rGlobal.videoSt()) {
 retry:
         // if (frame_queue_nb_remaining(&is->pictq) == 0) {
         if (rPictQ.size() == 0) {
@@ -916,7 +919,7 @@ retry:
                 // Frame *nextvp = frame_queue_peek_next(&is->pictq);
                 auto nextvp = rPictQ.nextFrame();
                 duration = vp_duration(is, vp, nextvp);
-                if(!is->step && (framedrop>0 || (framedrop && get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER)) && time > is->frame_timer + duration){
+                if(!is->step && (framedrop>0 || (framedrop && cpp_get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER)) && time > is->frame_timer + duration){
                     is->frame_drops_late++;
                     // frame_queue_next(&is->pictq);
                     rPictQ.popFrame();
@@ -992,16 +995,16 @@ display:
             sqsize = 0;
             if (is->audio_st)
                 aqsize = rAudioPackQ.size(); // is->audioq.size;
-            if (is->video_st)
+            if (rGlobal.videoSt())
                 vqsize = rVidPackQ.size();
             if (is->subtitle_st)
                 sqsize = rSubPackQ.size();
             av_diff = 0;
-            if (is->audio_st && is->video_st) {
+            if (is->audio_st && rGlobal.videoSt()) {
                 // av_diff = get_clock(&is->audclk) - get_clock(&is->vidclk);
                 av_diff = rAudClk.getClock () - rVidClk.getClock ();
             }
-            else if (is->video_st) {
+            else if (rGlobal.videoSt()) {
                 // av_diff = cpp_get_master_clock(is) - get_clock(&is->vidclk);
                 av_diff = cpp_get_master_clock(is) - rVidClk.getClock();
             }
@@ -1012,7 +1015,7 @@ display:
             av_bprintf(&buf,
                       "%7.2f %s:%7.3f fd=%4d aq=%5dKB vq=%5dKB sq=%5dB \r",
                       cpp_get_master_clock(is),
-                      (is->audio_st && is->video_st) ? "A-V" : (is->video_st ? "M-V" : (is->audio_st ? "M-A" : "   ")),
+                      (is->audio_st && rGlobal.videoSt()) ? "A-V" : (rGlobal.videoSt() ? "M-V" : (is->audio_st ? "M-A" : "   ")),
                       av_diff,
                       is->frame_drops_early + is->frame_drops_late,
                       aqsize / 1024,

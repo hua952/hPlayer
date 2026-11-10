@@ -68,7 +68,7 @@ double cpp_get_master_clock(VideoState *is)
     auto& rAudClk = rGlobal.m_audclk;
     auto& rExtclk = rGlobal.m_extclk;
 
-    switch (get_master_sync_type(is)) {
+    switch (cpp_get_master_sync_type(is)) {
         case AV_SYNC_VIDEO_MASTER:
             val = rVidClk.getClock();
             break;
@@ -283,6 +283,16 @@ void  globalData:: setSubtitleStream (int v)
     m_subtitleStream = v;
 }
 
+AVStream*  globalData:: videoSt ()
+{
+    return m_videoSt;
+}
+
+void globalData:: setVideoSt (AVStream* v)
+{
+    m_videoSt = v;
+}
+
 void cpp_sync_clock_to_slave(cppClock& c, cppClock &rSlave)
 {
     double clock = c.getClock ();
@@ -290,4 +300,22 @@ void cpp_sync_clock_to_slave(cppClock& c, cppClock &rSlave)
     if (!isnan(slave_clock) && (isnan(clock) || fabs(clock - slave_clock) > AV_NOSYNC_THRESHOLD))
         // set_clock(c, slave_clock, rSlave.serial());
         c.setClock(slave_clock, rSlave.serial());
+}
+
+int cpp_get_master_sync_type(VideoState *is)
+{
+    auto& rGlobal = tSingleton<globalData>::single();
+    if (is->av_sync_type == AV_SYNC_VIDEO_MASTER) {
+        if (rGlobal.videoSt())
+            return AV_SYNC_VIDEO_MASTER;
+        else
+            return AV_SYNC_AUDIO_MASTER;
+    } else if (is->av_sync_type == AV_SYNC_AUDIO_MASTER) {
+        if (is->audio_st)
+            return AV_SYNC_AUDIO_MASTER;
+        else
+            return AV_SYNC_EXTERNAL_CLOCK;
+    } else {
+        return AV_SYNC_EXTERNAL_CLOCK;
+    }
 }

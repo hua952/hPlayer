@@ -29,16 +29,13 @@
         </mainInitOK>
         <initvideoDec>
             <ask>
+                <streamIndex dataType="udword"/>
             </ask>
         </initvideoDec>
         <initAudio>
             <ask>
-            </ask>
-        </initAudio>
-        <setStreamIndex>
-            <ask>
                 <streamIndex dataType="udword"/>
             </ask>
-        </setStreamIndex>
+        </initAudio>
     </playerData>
 </rpc>

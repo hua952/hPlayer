@@ -86,4 +86,8 @@ int cpp_decoder_decode_frame(cppDecoder& rD, AVFrame *frame, AVSubtitle *sub);
 void cpp_sync_clock_to_slave(cppClock&c, cppClock &rSlave);
 
 int cpp_get_master_sync_type(VideoState *is);
+
+int create_hwaccel(AVBufferRef **device_ctx);
+
+int cpp_decoder_init(cppDecoder& rD, AVCodecContext *avctx, packQue* queue);
 #endif

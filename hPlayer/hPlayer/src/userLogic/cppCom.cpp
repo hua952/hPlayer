@@ -319,3 +319,50 @@ int cpp_get_master_sync_type(VideoState *is)
         return AV_SYNC_EXTERNAL_CLOCK;
     }
 }
+int create_hwaccel(AVBufferRef **device_ctx)
+{
+    enum AVHWDeviceType type;
+    int ret;
+    AVBufferRef *vk_dev;
+
+    *device_ctx = NULL;
+
+    if (!hwaccel)
+        return 0;
+
+    type = av_hwdevice_find_type_by_name(hwaccel);
+    if (type == AV_HWDEVICE_TYPE_NONE)
+        return AVERROR(ENOTSUP);
+
+    if (!vk_renderer) {
+        av_log(NULL, AV_LOG_ERROR, "Vulkan renderer is not available\n");
+        return AVERROR(ENOTSUP);
+    }
+
+    ret = vk_renderer_get_hw_dev(vk_renderer, &vk_dev);
+    if (ret < 0)
+        return ret;
+
+    ret = av_hwdevice_ctx_create_derived(device_ctx, type, vk_dev, 0);
+    if (!ret)
+        return 0;
+
+    if (ret != AVERROR(ENOSYS))
+        return ret;
+
+    av_log(NULL, AV_LOG_WARNING, "Derive %s from vulkan not supported.\n", hwaccel);
+    ret = av_hwdevice_ctx_create(device_ctx, type, NULL, NULL, 0);
+    return ret;
+}
+
+int cpp_decoder_init(cppDecoder& rD, AVCodecContext *avctx, packQue* queue) {
+    memset(&rD, 0, sizeof(rD));
+    rD.pkt = av_packet_alloc();
+    if (!rD.pkt)
+        return AVERROR(ENOMEM);
+    rD.avctx = avctx;
+    rD.queue = queue;
+    rD.start_pts = AV_NOPTS_VALUE;
+    rD.pkt_serial = -1;
+    return 0;
+}

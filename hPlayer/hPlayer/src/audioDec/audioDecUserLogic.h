@@ -10,7 +10,7 @@ extern "C"
 #include "logicWorker.h"
 
 class audioDec;
-class audioDecUserLogic: public IUserLogicWorker, public baseUserLogic
+class audioDecUserLogic: public IUserLogicWorker, public baseUserStreamLogic
 {
 public:
     enum audioLogicState
@@ -33,9 +33,16 @@ public:
     bufQue&  getBufQue ();
 
     logicWorker&  worker() override;
+    int  initAudio(int stream_index);
+
 private:
+    AVFilterGraph *agraph {nullptr};              // audio filter graph
+    AVFilterContext *in_audio_filter {nullptr};   // the first filter in the audio chain
+    AVFilterContext *out_audio_filter {nullptr};  // the last filter in the audio chain
     bufQue  m_bufQue;
     audioDec& m_raudioDec;
     AVFrame* m_frame {nullptr};
     audioLogicState  m_state{audioLogicState_readNotInit};
+private:
+    int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format);
 };

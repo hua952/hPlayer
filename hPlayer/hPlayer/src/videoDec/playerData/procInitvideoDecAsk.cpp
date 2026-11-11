@@ -11,14 +11,19 @@
 
 #include "playerDataRpc.h"
 
-static int sprocInitvideoDecAsk (videoDecUserLogic& rLogic, videoDec& rServer)
+static int sprocInitvideoDecAsk (videoDecUserLogic& rLogic, videoDec& rServer, const initvideoDecAsk& rAsk )
 {
-
-    rLogic.setState(videoDecUserLogic::videoDecLogicState_thisNeetInit);
 	gInfo("Rec procInitvideoDecAsk");
-    return procPacketFunRetType_del;
+    int nRet = procPacketFunRetType_del;
+    // rLogic.setState(videoDecUserLogic::videoDecLogicState_thisNeetInit);
+    auto ret = rLogic.initVideo(rAsk.m_streamIndex);
+    if(ret < 0) [[unlikely]]{
+        gError("initVideo error ret = "<<ret<<" streamIndex = "<<rAsk.m_streamIndex);
+        nRet = procPacketFunRetType_exitNow;
+    }
+    return nRet;
 }
-int  videoDec::procInitvideoDecAsk ()
+int  videoDec::procInitvideoDecAsk (const initvideoDecAsk& rAsk )
 {
-    return sprocInitvideoDecAsk(*(dynamic_cast<videoDecUserLogic*>(getIUserLogicWorker ())), *this);
+    return sprocInitvideoDecAsk(*(dynamic_cast<videoDecUserLogic*>(getIUserLogicWorker ())), *this,rAsk);
 }

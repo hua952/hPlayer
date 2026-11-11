@@ -11,13 +11,14 @@
 
 #include "playerDataRpc.h"
 
-static int sprocInitAudioAsk (audioDecUserLogic& rLogic, audioDec& rServer)
+static int sprocInitAudioAsk (audioDecUserLogic& rLogic, audioDec& rServer, const initAudioAsk& rAsk )
 {
-    rLogic.setState(audioDecUserLogic::audioLogicState_thisNeetInit);
 	gInfo("Rec procInitAudioAsk");
+    // rLogic.setState(audioDecUserLogic::audioLogicState_thisNeetInit);
+    rLogic.initAudio(rAsk.m_streamIndex);
     return procPacketFunRetType_del;
 }
-int  audioDec::procInitAudioAsk ()
+int  audioDec::procInitAudioAsk (const initAudioAsk& rAsk )
 {
-    return sprocInitAudioAsk(*(dynamic_cast<audioDecUserLogic*>(getIUserLogicWorker ())), *this);
+    return sprocInitAudioAsk(*(dynamic_cast<audioDecUserLogic*>(getIUserLogicWorker ())), *this,rAsk);
 }

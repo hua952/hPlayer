@@ -513,77 +513,7 @@ fail:
 }
 */
 
-int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format)
-{
-    AVFilterContext *filt_asrc = NULL, *filt_asink = NULL;
-    char aresample_swr_opts[512] = "";
-    const AVDictionaryEntry *e = NULL;
-    AVBPrint bp;
-    char asrc_args[256];
-    int ret;
 
-    avfilter_graph_free(&is->agraph);
-    if (!(is->agraph = avfilter_graph_alloc()))
-        return AVERROR(ENOMEM);
-    is->agraph->nb_threads = filter_nbthreads;
-
-    av_bprint_init(&bp, 0, AV_BPRINT_SIZE_AUTOMATIC);
-
-    while ((e = av_dict_iterate(swr_opts, e)))
-        av_strlcatf(aresample_swr_opts, sizeof(aresample_swr_opts), "%s=%s:", e->key, e->value);
-    if (strlen(aresample_swr_opts))
-        aresample_swr_opts[strlen(aresample_swr_opts)-1] = '\0';
-    av_opt_set(is->agraph, "aresample_swr_opts", aresample_swr_opts, 0);
-
-    av_channel_layout_describe_bprint(&is->audio_filter_src.ch_layout, &bp);
-
-    ret = snprintf(asrc_args, sizeof(asrc_args),
-                   "sample_rate=%d:sample_fmt=%s:time_base=%d/%d:channel_layout=%s",
-                   is->audio_filter_src.freq, av_get_sample_fmt_name(is->audio_filter_src.fmt),
-                   1, is->audio_filter_src.freq, bp.str);
-
-    ret = avfilter_graph_create_filter(&filt_asrc,
-                                       avfilter_get_by_name("abuffer"), "ffplay_abuffer",
-                                       asrc_args, NULL, is->agraph);
-    if (ret < 0)
-        goto end;
-
-    filt_asink = avfilter_graph_alloc_filter(is->agraph, avfilter_get_by_name("abuffersink"),
-                                             "ffplay_abuffersink");
-    if (!filt_asink) {
-        ret = AVERROR(ENOMEM);
-        goto end;
-    }
-
-    if ((ret = av_opt_set(filt_asink, "sample_formats", "s16", AV_OPT_SEARCH_CHILDREN)) < 0)
-        goto end;
-
-    if (force_output_format) {
-        if ((ret = av_opt_set_array(filt_asink, "channel_layouts", AV_OPT_SEARCH_CHILDREN,
-                                    0, 1, AV_OPT_TYPE_CHLAYOUT, &is->audio_tgt.ch_layout)) < 0)
-            goto end;
-        if ((ret = av_opt_set_array(filt_asink, "samplerates", AV_OPT_SEARCH_CHILDREN,
-                                    0, 1, AV_OPT_TYPE_INT, &is->audio_tgt.freq)) < 0)
-            goto end;
-    }
-
-    ret = avfilter_init_dict(filt_asink, NULL);
-    if (ret < 0)
-        goto end;
-
-    if ((ret = configure_filtergraph(is->agraph, afilters, filt_asrc, filt_asink)) < 0)
-        goto end;
-
-    is->in_audio_filter  = filt_asrc;
-    is->out_audio_filter = filt_asink;
-
-end:
-    if (ret < 0)
-        avfilter_graph_free(&is->agraph);
-    av_bprint_finalize(&bp, NULL);
-
-    return ret;
-}
 
 static int dummy;
 static int opt_width(void *optctx, const char *opt, const char *arg)

@@ -9,12 +9,12 @@ baseUserLogic:: ~baseUserLogic ()
 {
 }
 
-int  baseUserLogic:: streamIndex ()
+int  baseUserStreamLogic:: streamIndex ()
 {
     return m_streamIndex;
 }
 
-void  baseUserLogic:: setStreamIndex (int v)
+void  baseUserStreamLogic:: setStreamIndex (int v)
 {
     m_streamIndex = v;
 }

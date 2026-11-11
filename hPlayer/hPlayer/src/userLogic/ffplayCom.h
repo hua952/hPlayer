@@ -197,12 +197,13 @@ typedef struct VideoState {
     int step;
 
     int vfilter_idx;
-    // AVFilterContext *in_video_filter;   // the first filter in the video chain
-    // AVFilterContext *out_video_filter;  // the last filter in the video chain
+    /*
+    AVFilterContext *in_video_filter;   // the first filter in the video chain
+    AVFilterContext *out_video_filter;  // the last filter in the video chain
     AVFilterContext *in_audio_filter;   // the first filter in the audio chain
     AVFilterContext *out_audio_filter;  // the last filter in the audio chain
     AVFilterGraph *agraph;              // audio filter graph
-
+    */
     /*int last_video_stream, last_audio_stream, last_subtitle_stream;*/
 } VideoState;
 
@@ -285,7 +286,7 @@ int cmp_audio_fmts(enum AVSampleFormat fmt1, int64_t channel_count1,
 /*int configure_video_filters(AVFilterGraph *graph, VideoState *is, const char *vfilters, AVFrame *frame);*/
 int get_video_frame(VideoState *is, AVFrame *frame);
 
-int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format);
+/*int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format);*/
 /*int create_hwaccel(AVBufferRef **device_ctx);*/
 void set_default_window_size(int width, int height, AVRational sar);
 /*int is_realtime(AVFormatContext *s);*/

@@ -7,7 +7,7 @@ extern "C"
 }
 
 class videoDec;
-class videoDecUserLogic: public IUserLogicWorker, public baseUserLogic
+class videoDecUserLogic: public IUserLogicWorker, public baseUserStreamLogic
 {
 public:
     enum videoDecLogicState
@@ -33,6 +33,7 @@ public:
     void  setIn_video_filter (AVFilterContext* v);
     AVFilterContext*  out_video_filter ();
     void  setOut_video_filter (AVFilterContext* v);
+    int  initVideo(int stream_index);
 private:
     AVFilterContext*  m_out_video_filter{nullptr};
     AVFilterContext*  m_in_video_filter{nullptr};

@@ -8,11 +8,16 @@ class baseUserLogic
 public:
     baseUserLogic ();
     ~baseUserLogic ();
-    int  streamIndex ();
-    void  setStreamIndex (int v);
     virtual logicWorker&  worker() = 0;
 private:
-    int  m_streamIndex{-1};
     int  m_serialCache;
+};
+class baseUserStreamLogic:public baseUserLogic
+{
+public:
+    int  streamIndex ();
+    void  setStreamIndex (int v);
+private:
+    int  m_streamIndex{-1};
 };
 #endif

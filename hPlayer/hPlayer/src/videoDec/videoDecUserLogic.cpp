@@ -169,6 +169,115 @@ videoDecUserLogic::videoDecUserLogic (videoDec& rServer):m_rvideoDec(rServer)
 {
 }
 
+/* open a given stream. Return 0 if OK */
+int  videoDecUserLogic:: initVideo(int stream_index)
+{
+    int nRet = 0;
+    do{
+        setState(videoDecUserLogic::videoDecLogicState_thisNeetInit);
+        setStreamIndex (stream_index);
+    }while(0);
+    return nRet;
+    /*
+    VideoState *is = getVideoState();
+    AVFormatContext *ic = is->ic;
+    AVCodecContext *avctx;
+    const AVCodec *codec;
+    const char *forced_codec_name = NULL;
+    AVDictionary *opts = NULL;
+    int sample_rate;
+    AVChannelLayout ch_layout = { 0 };
+    int ret = 0;
+    int stream_lowres = lowres;
+    auto& rGlobal = tSingleton<globalData>::single();
+    auto& rAudioPackQ = rGlobal.m_audioPackQ;
+    auto& rAudDec = rGlobal.m_audDec;
+
+    if (stream_index < 0 || stream_index >= ic->nb_streams)
+        return -1;
+
+    avctx = avcodec_alloc_context3(NULL);
+    if (!avctx)
+        return AVERROR(ENOMEM);
+
+    ret = avcodec_parameters_to_context(avctx, ic->streams[stream_index]->codecpar);
+    if (ret < 0)
+        goto fail;
+    avctx->pkt_timebase = ic->streams[stream_index]->time_base;
+
+    codec = avcodec_find_decoder(avctx->codec_id);
+
+    forced_codec_name =    video_codec_name;
+    if (forced_codec_name)
+        codec = avcodec_find_decoder_by_name(forced_codec_name);
+    if (!codec) {
+        if (forced_codec_name) av_log(NULL, AV_LOG_WARNING,
+                                      "No codec could be found with name '%s'\n", forced_codec_name);
+        else                   av_log(NULL, AV_LOG_WARNING,
+                                      "No decoder could be found for codec %s\n", avcodec_get_name(avctx->codec_id));
+        ret = AVERROR(EINVAL);
+        goto fail;
+    }
+
+    avctx->codec_id = codec->id;
+    if (stream_lowres > codec->max_lowres) {
+        av_log(avctx, AV_LOG_WARNING, "The maximum value for lowres supported by the decoder is %d\n",
+                codec->max_lowres);
+        stream_lowres = codec->max_lowres;
+    }
+    avctx->lowres = stream_lowres;
+
+    if (fast)
+        avctx->flags2 |= AV_CODEC_FLAG2_FAST;
+
+    ret = filter_codec_opts(codec_opts, avctx->codec_id, ic,
+                            ic->streams[stream_index], codec, &opts, NULL);
+    if (ret < 0)
+        goto fail;
+
+    if (!av_dict_get(opts, "threads", NULL, 0))
+        av_dict_set(&opts, "threads", "auto", 0);
+    if (stream_lowres)
+        av_dict_set_int(&opts, "lowres", stream_lowres, 0);
+
+    av_dict_set(&opts, "flags", "+copy_opaque", AV_DICT_MULTIKEY);
+
+    if (avctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+        ret = create_hwaccel(&avctx->hw_device_ctx);
+        if (ret < 0)
+            goto fail;
+    }
+
+    if ((ret = avcodec_open2(avctx, codec, &opts)) < 0) {
+        goto fail;
+    }
+    ret = check_avoptions(opts);
+    if (ret < 0)
+        goto fail;
+
+    is->eof = 0;
+    ic->streams[stream_index]->discard = AVDISCARD_DEFAULT;
+
+    rGlobal.setVideoStream (stream_index);
+    rGlobal.setVideoSt(ic->streams[stream_index]);
+    if ((ret = cpp_decoder_init(rGlobal.vidDec, avctx, &rGlobal.vidPackQ)) < 0)
+        goto fail;
+    rGlobal.vidPackQ.start();
+    setState(videoDecUserLogic::videoDecLogicState_thisNeetInit);
+    setStreamIndex (stream_index);
+    is->queue_attachments_req = 1;
+    goto out;
+
+fail:
+    avcodec_free_context(&avctx);
+out:
+    av_channel_layout_uninit(&ch_layout);
+    av_dict_free(&opts);
+
+    return ret;
+    */
+}
+
 int videoDecUserLogic::onLoopBegin()
 {
     int nRet = 0;
@@ -176,10 +285,6 @@ int videoDecUserLogic::onLoopBegin()
     } while (0);
     return nRet;
 }
-
-
-
-
 
 
 int   videoDecUserLogic:: initThis()
@@ -284,20 +389,16 @@ int videoDecUserLogic::onLoopFrame()
         if (!rVidPackQ.mabeNeetPush()) {
             break;
         }
-    // for (;;) {
         ret = cpp_get_video_frame(is, frame);
         if (ret < 0) {
-            // goto the_end;
             break;
         }
         if (!ret) {
-            // continue;
             break;
         }
         if (   last_w != frame->width
             || last_h != frame->height
             || last_format != frame->format
-            // || last_serial != is->viddec.pkt_serial
             || last_serial != rDecoder.pkt_serial
             || last_vfilter_idx != is->vfilter_idx) {
             av_log(NULL, AV_LOG_DEBUG,
@@ -305,7 +406,6 @@ int videoDecUserLogic::onLoopFrame()
                    last_w, last_h,
                    (const char *)av_x_if_null(av_get_pix_fmt_name(last_format), "none"), last_serial,
                    frame->width, frame->height,
-                   // (const char *)av_x_if_null(av_get_pix_fmt_name((enum AVPixelFormat)frame->format), "none"), is->viddec.pkt_serial);
                    (const char *)av_x_if_null(av_get_pix_fmt_name((enum AVPixelFormat)frame->format), "none"), rDecoder.pkt_serial);
             avfilter_graph_free(&graph);
             graph = avfilter_graph_alloc();
@@ -316,18 +416,6 @@ int videoDecUserLogic::onLoopFrame()
             }
             graph->nb_threads = filter_nbthreads;
             if ((ret = configure_video_filters(graph, is, vfilters_list ? vfilters_list[is->vfilter_idx] : NULL, frame)) < 0) {
-                /*
-                SDL_Event event;
-                event.type = FF_QUIT_EVENT;
-                event.user.data1 = is;
-                SDL_PushEvent(&event);
-                goto the_end;
-                */
-                /*
-                NeetExitNtfAskMsg msg;
-                getServer().sendMsg(msg);
-                setState(videoDecLogicState_waitExit);
-                */
                 rGlobal.setAbort(true);
                 break;
             }
@@ -336,7 +424,6 @@ int videoDecUserLogic::onLoopFrame()
             last_w = frame->width;
             last_h = frame->height;
             last_format = (enum AVPixelFormat)frame->format;
-            // last_serial = is->viddec.pkt_serial;
             last_serial = rDecoder.pkt_serial;
             last_vfilter_idx = is->vfilter_idx;
             frame_rate = av_buffersink_get_frame_rate(filt_out);
@@ -344,7 +431,6 @@ int videoDecUserLogic::onLoopFrame()
 
         ret = av_buffersrc_add_frame(filt_in, frame);
         if (ret < 0) {
-            // goto the_end;
             break;
         }
 
@@ -370,29 +456,18 @@ int videoDecUserLogic::onLoopFrame()
             AVRational tbTemp;
             tbTemp.num = frame_rate.den; tbTemp.den = frame_rate.num;
             duration = (frame_rate.num && frame_rate.den ? av_q2d(tbTemp) : 0);
-            // duration = (frame_rate.num && frame_rate.den ? av_q2d((AVRational){frame_rate.den, frame_rate.num}) : 0);
             pts = (frame->pts == AV_NOPTS_VALUE) ? NAN : frame->pts * av_q2d(tb);
 
-            // ret = queue_picture(is, frame, pts, duration, fd ? fd->pkt_pos : -1, is->viddec.pkt_serial);
             ret = cpp_queue_picture(is, frame, pts, duration, fd ? fd->pkt_pos : -1, rDecoder.pkt_serial);
             av_frame_unref(frame);
-            // if (is->videoq.serial != is->viddec.pkt_serial) {
             if (rVidPackQ.serial() != rDecoder.pkt_serial) {
                 break;
             }
         }
 
         if (ret < 0) {
-            // goto the_end;
             break;
         }
-    // }
-        /*
- the_end:
-    avfilter_graph_free(&graph);
-    av_frame_free(&frame);
-    return 0;
-    */
     } while (0);
     
     return nRet;
@@ -451,16 +526,6 @@ void  videoDecUserLogic:: setOut_video_filter (AVFilterContext* v)
     m_out_video_filter = v;
 }
 
-/*
-static void video_decoder_abort(Decoder *d, FrameQueue *fq)
-{
-    packet_queue_abort(d->queue);
-    frame_queue_signal(fq);
-    // SDL_WaitThread(d->decoder_tid, NULL);
-    // d->decoder_tid = NULL;
-    packet_queue_flush(d->queue);
-}
-*/
 extern "C"
 {
     

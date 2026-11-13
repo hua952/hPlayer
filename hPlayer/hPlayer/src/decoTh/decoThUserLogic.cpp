@@ -147,10 +147,12 @@ int  decoThUserLogic:: cpp_stream_component_open_base(int stream_index)
         if ((ret = cpp_decoder_init(rGlobal.vidDec, avctx, &rGlobal.vidPackQ)) < 0)
             goto fail;
         rGlobal.vidPackQ.start();
+        /*
         {
             initvideoDecAskMsg msg;
             rWork.sendMsg(msg);
         }
+        */
         is->queue_attachments_req = 1;
         break;
     case AVMEDIA_TYPE_SUBTITLE:

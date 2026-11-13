@@ -37,7 +37,10 @@ public:
     void  setYtop (int v);
     int  xpos ();
     void  setXpos (int v);
+    int  step ();
+    void  setStep (int v);
 private:
+    int  m_step{0};
     int  m_xpos{0};
     int  m_ytop{0};
     int  m_xleft{0};
@@ -47,6 +50,8 @@ private:
     main& m_rmain;
     mainState   m_mainState = mainState_noWindow;
 private:
+    void toggle_pause(VideoState *is);
+    void step_to_next_frame(VideoState *is);
     void cpp_video_image_display(VideoState *is);
     void video_display(VideoState *is);
     int video_open(VideoState *is);

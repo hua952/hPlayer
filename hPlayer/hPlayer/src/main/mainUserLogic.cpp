@@ -59,10 +59,10 @@ int64_t cpp_audio_frame_queue_last_pos()
     } while (0);
     return nRet;
 }
-static void toggle_pause(VideoState *is)
+void mainUserLogic::toggle_pause(VideoState *is)
 {
     cpp_stream_toggle_pause(is);
-    is->step = 0;
+    setStep(0);
 }
 
 static void toggle_mute(VideoState *is)
@@ -559,13 +559,13 @@ void cpp_stream_toggle_pause(VideoState *is)
 }
 
 
-static void step_to_next_frame(VideoState *is)
+void mainUserLogic::step_to_next_frame(VideoState *is)
 {
     /* if the stream is paused unpause it, then step */
     auto& rGlobal = tSingleton<globalData>::single();
     if (rGlobal.paused())
         cpp_stream_toggle_pause(is);
-    is->step = 1;
+    setStep(1);
 }
 
 
@@ -921,7 +921,7 @@ retry:
                 // Frame *nextvp = frame_queue_peek_next(&is->pictq);
                 auto nextvp = rPictQ.nextFrame();
                 duration = vp_duration(is, vp, nextvp);
-                if(!is->step && (framedrop>0 || (framedrop && cpp_get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER)) && time > is->frame_timer + duration){
+                if(!step() && (framedrop>0 || (framedrop && cpp_get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER)) && time > is->frame_timer + duration){
                     is->frame_drops_late++;
                     // frame_queue_next(&is->pictq);
                     rPictQ.popFrame();
@@ -972,7 +972,7 @@ retry:
             rPictQ.popFrame();
             //is->force_refresh = 1;
             setForceRefresh (true);
-            if (is->step && !rGlobal.paused())
+            if (step() && !rGlobal.paused())
                 cpp_stream_toggle_pause(is);
         }
 display:
@@ -1339,5 +1339,15 @@ int  mainUserLogic:: xpos ()
 void  mainUserLogic:: setXpos (int v)
 {
     m_xpos = v;
+}
+
+int  mainUserLogic:: step ()
+{
+    return m_step;
+}
+
+void  mainUserLogic:: setStep (int v)
+{
+    m_step = v;
 }
 

@@ -193,18 +193,16 @@ typedef struct VideoState {
     int eof;
 
     char *filename;
-    /*int width, height, xleft, ytop;*/
+    /*int width, height, xleft, ytop;
     int step;
 
-    /*
     int vfilter_idx;
     AVFilterContext *in_video_filter;   // the first filter in the video chain
     AVFilterContext *out_video_filter;  // the last filter in the video chain
     AVFilterContext *in_audio_filter;   // the first filter in the audio chain
     AVFilterContext *out_audio_filter;  // the last filter in the audio chain
     AVFilterGraph *agraph;              // audio filter graph
-    */
-    /*int last_video_stream, last_audio_stream, last_subtitle_stream;*/
+    int last_video_stream, last_audio_stream, last_subtitle_stream;*/
 } VideoState;
 
 extern const AVInputFormat *file_iformat;

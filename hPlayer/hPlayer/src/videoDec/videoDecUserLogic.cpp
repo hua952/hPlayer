@@ -400,7 +400,7 @@ int videoDecUserLogic::onLoopFrame()
             || last_h != frame->height
             || last_format != frame->format
             || last_serial != rDecoder.pkt_serial
-            || last_vfilter_idx != is->vfilter_idx) {
+            || last_vfilter_idx != rGlobal.vfilterIdx()) {
             av_log(NULL, AV_LOG_DEBUG,
                    "Video frame changed from size:%dx%d format:%s serial:%d to size:%dx%d format:%s serial:%d\n",
                    last_w, last_h,
@@ -415,7 +415,7 @@ int videoDecUserLogic::onLoopFrame()
                 break;
             }
             graph->nb_threads = filter_nbthreads;
-            if ((ret = configure_video_filters(graph, is, vfilters_list ? vfilters_list[is->vfilter_idx] : NULL, frame)) < 0) {
+            if ((ret = configure_video_filters(graph, is, vfilters_list ? vfilters_list[rGlobal.vfilterIdx()] : NULL, frame)) < 0) {
                 rGlobal.setAbort(true);
                 break;
             }
@@ -425,7 +425,7 @@ int videoDecUserLogic::onLoopFrame()
             last_h = frame->height;
             last_format = (enum AVPixelFormat)frame->format;
             last_serial = rDecoder.pkt_serial;
-            last_vfilter_idx = is->vfilter_idx;
+            last_vfilter_idx = rGlobal.vfilterIdx();
             frame_rate = av_buffersink_get_frame_rate(filt_out);
         }
 

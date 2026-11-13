@@ -196,8 +196,8 @@ typedef struct VideoState {
     /*int width, height, xleft, ytop;*/
     int step;
 
-    int vfilter_idx;
     /*
+    int vfilter_idx;
     AVFilterContext *in_video_filter;   // the first filter in the video chain
     AVFilterContext *out_video_filter;  // the last filter in the video chain
     AVFilterContext *in_audio_filter;   // the first filter in the audio chain

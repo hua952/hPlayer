@@ -38,7 +38,7 @@ public:
     int  xpos ();
     void  setXpos (int v);
 private:
-    int  m_xpos;
+    int  m_xpos{0};
     int  m_ytop{0};
     int  m_xleft{0};
     int  m_height{0};

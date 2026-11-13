@@ -64,11 +64,15 @@ struct globalData
     void  setVideoSt (AVStream* v);
     int   showMode();
     void  setShowMode(int v);
+    int   vfilterIdx();
+    void  setVfilterIdx(int v);
 private:
     AVStream*  m_videoSt{nullptr};
     int  m_subtitleStream{-1};
     int  m_audioStream{-1};
     int  m_videoStream{-1};
+
+    std::atomic<int> m_vfilter_idx{0};
     std::atomic<int> m_show_mode{-1};
     std::atomic<bool> m_paused{false};
     std::atomic<bool> m_abort{false};

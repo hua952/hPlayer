@@ -223,6 +223,16 @@ globalData::globalData ():m_audioPackQ(64), m_subPackQ(10), vidClk(&vidPackQ), m
 {
 }
 
+int  globalData:: vfilterIdx()
+{
+    return m_vfilter_idx.load(std::memory_order_relaxed);
+}
+
+void  globalData::setVfilterIdx(int v)
+{
+    m_vfilter_idx.store(v, std::memory_order_relaxed);
+}
+
 int  globalData:: showMode()
 {
     return m_show_mode.load(std::memory_order_relaxed);

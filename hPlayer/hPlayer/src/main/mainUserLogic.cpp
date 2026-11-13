@@ -1118,12 +1118,18 @@ int mainUserLogic::ffplay_event_loop()
                 /*stream_cycle_channel(cur_stream, AVMEDIA_TYPE_SUBTITLE);*/
                 break;
             case SDLK_w:
-                if (rGlobal.showMode() == VideoState::SHOW_MODE_VIDEO && cur_stream->vfilter_idx < nb_vfilters - 1) {
-                    if (++cur_stream->vfilter_idx >= nb_vfilters)
-                        cur_stream->vfilter_idx = 0;
+                {
+                    auto vIdx = rGlobal.vfilterIdx();
+                if (rGlobal.showMode() == VideoState::SHOW_MODE_VIDEO && vIdx < nb_vfilters - 1) {
+                    if (++vIdx >= nb_vfilters) {
+                        vIdx = 0;
+                    }
+                    rGlobal.setVfilterIdx(vIdx);
                 } else {
-                    cur_stream->vfilter_idx = 0;
+                    rGlobal.setVfilterIdx(0);
+                    //cur_stream->vfilter_idx = 0;
                     toggle_audio_display();
+                }
                 }
                 break;
             case SDLK_PAGEUP:

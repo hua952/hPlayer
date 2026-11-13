@@ -625,7 +625,7 @@ int  decoThUserLogic:: initThis()
                          st_index[AVMEDIA_TYPE_AUDIO] :
                          st_index[AVMEDIA_TYPE_VIDEO]),
                         NULL, 0);
-        is->show_mode = (decltype (is->show_mode))(show_mode);
+        rGlobal.setShowMode (show_mode);
         if (st_index[AVMEDIA_TYPE_VIDEO] >= 0) {
             AVStream *st = ic->streams[st_index[AVMEDIA_TYPE_VIDEO]];
             AVCodecParameters *codecpar = st->codecpar;
@@ -651,8 +651,8 @@ int  decoThUserLogic:: initThis()
             p->m_streamIndex = st_index[AVMEDIA_TYPE_VIDEO];
             getServer().sendMsg(msg);
         }
-        if (is->show_mode == VideoState::SHOW_MODE_NONE)
-            is->show_mode = ret >= 0 ? VideoState::SHOW_MODE_VIDEO : VideoState::SHOW_MODE_RDFT;
+        if (rGlobal.showMode() == VideoState::SHOW_MODE_NONE)
+            rGlobal.setShowMode(ret >= 0 ? VideoState::SHOW_MODE_VIDEO : VideoState::SHOW_MODE_RDFT);
 
         if (st_index[AVMEDIA_TYPE_SUBTITLE] >= 0) {
             cpp_stream_component_open_base(st_index[AVMEDIA_TYPE_SUBTITLE]);

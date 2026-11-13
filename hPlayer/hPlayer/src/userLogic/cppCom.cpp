@@ -223,6 +223,16 @@ globalData::globalData ():m_audioPackQ(64), m_subPackQ(10), vidClk(&vidPackQ), m
 {
 }
 
+int  globalData:: showMode()
+{
+    return m_show_mode.load(std::memory_order_relaxed);
+}
+
+void  globalData::setShowMode(int v)
+{
+    m_show_mode.store(v, std::memory_order_relaxed);
+}
+
 bool    globalData:: abort()
 {
     return m_abort.load(std::memory_order_relaxed);
@@ -366,3 +376,4 @@ int cpp_decoder_init(cppDecoder& rD, AVCodecContext *avctx, packQue* queue) {
     rD.pkt_serial = -1;
     return 0;
 }
+

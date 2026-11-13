@@ -62,11 +62,14 @@ struct globalData
     void  setSubtitleStream (int v);
     AVStream*  videoSt ();
     void  setVideoSt (AVStream* v);
+    int   showMode();
+    void  setShowMode(int v);
 private:
     AVStream*  m_videoSt{nullptr};
     int  m_subtitleStream{-1};
     int  m_audioStream{-1};
     int  m_videoStream{-1};
+    std::atomic<int> m_show_mode{-1};
     std::atomic<bool> m_paused{false};
     std::atomic<bool> m_abort{false};
     std::atomic<double> m_curPlayPos;

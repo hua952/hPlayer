@@ -110,7 +110,7 @@ static void video_audio_display(VideoState *s)
     channels = s->audio_tgt.ch_layout.nb_channels;
     nb_display_channels = channels;
     if (!rGlobal.paused()) {
-        int data_used= s->show_mode == VideoState::SHOW_MODE_WAVES ? s->width : (2*nb_freq);
+        int data_used= rGlobal.showMode() == VideoState::SHOW_MODE_WAVES ? s->width : (2*nb_freq);
         n = 2 * channels;
         delay = s->audio_write_buf_size;
         delay /= n;
@@ -127,7 +127,7 @@ static void video_audio_display(VideoState *s)
             delay = data_used;
 
         i_start= x = compute_mod(s->sample_array_index - delay * channels, SAMPLE_ARRAY_SIZE);
-        if (s->show_mode == VideoState::SHOW_MODE_WAVES) {
+        if (rGlobal.showMode() == VideoState::SHOW_MODE_WAVES) {
             h = INT_MIN;
             for (i = 0; i < 1000; i += channels) {
                 int idx = (SAMPLE_ARRAY_SIZE + x - i) % SAMPLE_ARRAY_SIZE;
@@ -148,7 +148,7 @@ static void video_audio_display(VideoState *s)
         i_start = s->last_i_start;
     }
 
-    if (s->show_mode == VideoState::SHOW_MODE_WAVES) {
+    if (rGlobal.showMode() == VideoState::SHOW_MODE_WAVES) {
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
         /* total height for one channel */
@@ -200,7 +200,7 @@ static void video_audio_display(VideoState *s)
         }
         if (err < 0 || !s->rdft_data) {
             av_log(NULL, AV_LOG_ERROR, "Failed to allocate buffers for RDFT, switching to waves display\n");
-            s->show_mode = VideoState::SHOW_MODE_WAVES;
+            rGlobal.setShowMode(VideoState::SHOW_MODE_WAVES);
         } else {
             float *data_in[2];
             AVComplexFloat *data[2];
@@ -456,14 +456,14 @@ void mainUserLogic::toggle_audio_display()
 {
     auto& rGlobal = tSingleton<globalData>::single();
     auto is = getVideoState();
-    int next = is->show_mode;
+    int next = rGlobal.showMode();
     do {
         next = (next + 1) % VideoState::SHOW_MODE_NB;
-    } while (next != is->show_mode && (next == VideoState::SHOW_MODE_VIDEO && !rGlobal.videoSt() || next != VideoState::SHOW_MODE_VIDEO && !is->audio_st));
-    if (is->show_mode != next) {
+    } while (next != rGlobal.showMode() && (next == VideoState::SHOW_MODE_VIDEO && !rGlobal.videoSt() || next != VideoState::SHOW_MODE_VIDEO && !is->audio_st));
+    if (rGlobal.showMode() != next) {
         setForceRefresh(true);
         // is->force_refresh = 1;
-        is->show_mode = (VideoState::ShowMode)next;
+        rGlobal.setShowMode(next);
     }
 }
 
@@ -830,7 +830,7 @@ static void video_display(VideoState *is)
 
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
-    if (is->audio_st && is->show_mode != VideoState::SHOW_MODE_VIDEO)
+    if (is->audio_st && rGlobal.showMode() != VideoState::SHOW_MODE_VIDEO)
         video_audio_display(is);
     else if (rGlobal.videoSt())
         cpp_video_image_display(is);
@@ -859,7 +859,7 @@ void mainUserLogic::cpp_video_refresh(void *opaque, double *remaining_time)
         cpp_check_external_clock_speed(is);
     }
 
-    if (!display_disable && is->show_mode != VideoState::SHOW_MODE_VIDEO && is->audio_st) {
+    if (!display_disable && rGlobal.showMode() != VideoState::SHOW_MODE_VIDEO && is->audio_st) {
         time = av_gettime_relative() / 1000000.0;
         if (forceRefresh() || is->last_vis_time + rdftspeed < time) {
             video_display(is);
@@ -976,7 +976,7 @@ retry:
 display:
         /* display picture */
         // if (!display_disable && is->force_refresh && is->show_mode == VideoState::SHOW_MODE_VIDEO && is->pictq.rindex_shown)
-        if (!display_disable && forceRefresh() && is->show_mode == VideoState::SHOW_MODE_VIDEO && rPictQ.haveLastFrame())
+        if (!display_disable && forceRefresh() && rGlobal.showMode() == VideoState::SHOW_MODE_VIDEO && rPictQ.haveLastFrame())
             video_display(is);
     }
     // is->force_refresh = 0;
@@ -1048,7 +1048,7 @@ void mainUserLogic::refresh_loop_wait_event(VideoState *is, SDL_Event *event) {
         if (remaining_time > 0.0)
             av_usleep((int64_t)(remaining_time * 1000000.0));
         remaining_time = REFRESH_RATE;
-        if (is->show_mode != VideoState::SHOW_MODE_NONE && (!rGlobal.paused() || forceRefresh()))
+        if (rGlobal.showMode() != VideoState::SHOW_MODE_NONE && (!rGlobal.paused() || forceRefresh()))
             cpp_video_refresh(is, &remaining_time);
         SDL_PumpEvents();
     }
@@ -1117,7 +1117,7 @@ int mainUserLogic::ffplay_event_loop()
                 /*stream_cycle_channel(cur_stream, AVMEDIA_TYPE_SUBTITLE);*/
                 break;
             case SDLK_w:
-                if (cur_stream->show_mode == VideoState::SHOW_MODE_VIDEO && cur_stream->vfilter_idx < nb_vfilters - 1) {
+                if (rGlobal.showMode() == VideoState::SHOW_MODE_VIDEO && cur_stream->vfilter_idx < nb_vfilters - 1) {
                     if (++cur_stream->vfilter_idx >= nb_vfilters)
                         cur_stream->vfilter_idx = 0;
                 } else {

@@ -20,8 +20,7 @@ static double vp_duration(VideoState *is, cppFrame *vp, cppFrame *nextvp) {
     }
 }
 
-extern "C"
-{
+
 void cpp_stream_toggle_pause(VideoState *is);
 int64_t cpp_video_frame_queue_last_pos()
 {
@@ -94,7 +93,7 @@ static inline int compute_mod(int a, int b)
     return a < 0 ? a%b + b : a%b;
 }
 
-static void video_audio_display(VideoState *s)
+void mainUserLogic::video_audio_display(VideoState *s)
 {
     int i, i_start, x, y1, y, ys, delay, n, nb_display_channels;
     int ch, channels, h, h2;
@@ -102,7 +101,7 @@ static void video_audio_display(VideoState *s)
     int rdft_bits, nb_freq;
     auto& rGlobal = tSingleton<globalData>::single();
 
-    for (rdft_bits = 1; (1 << rdft_bits) < 2 * s->height; rdft_bits++)
+    for (rdft_bits = 1; (1 << rdft_bits) < 2 * height(); rdft_bits++)
         ;
     nb_freq = 1 << (rdft_bits - 1);
 
@@ -110,7 +109,7 @@ static void video_audio_display(VideoState *s)
     channels = s->audio_tgt.ch_layout.nb_channels;
     nb_display_channels = channels;
     if (!rGlobal.paused()) {
-        int data_used= rGlobal.showMode() == VideoState::SHOW_MODE_WAVES ? s->width : (2*nb_freq);
+        int data_used= rGlobal.showMode() == VideoState::SHOW_MODE_WAVES ? width() : (2*nb_freq);
         n = 2 * channels;
         delay = s->audio_write_buf_size;
         delay /= n;
@@ -152,13 +151,13 @@ static void video_audio_display(VideoState *s)
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
         /* total height for one channel */
-        h = s->height / nb_display_channels;
+        h = height() / nb_display_channels;
         /* graph height / 2 */
         h2 = (h * 9) / 20;
         for (ch = 0; ch < nb_display_channels; ch++) {
             i = i_start + ch;
-            y1 = s->ytop + ch * h + (h / 2); /* position of center line */
-            for (x = 0; x < s->width; x++) {
+            y1 = ytop() + ch * h + (h / 2); /* position of center line */
+            for (x = 0; x < width(); x++) {
                 y = (s->sample_array[i] * h2) >> 15;
                 if (y < 0) {
                     y = -y;
@@ -166,7 +165,7 @@ static void video_audio_display(VideoState *s)
                 } else {
                     ys = y1;
                 }
-                fill_rectangle(s->xleft + x, ys, 1, y);
+                fill_rectangle(xleft() + x, ys, 1, y);
                 i += channels;
                 if (i >= SAMPLE_ARRAY_SIZE)
                     i -= SAMPLE_ARRAY_SIZE;
@@ -176,16 +175,16 @@ static void video_audio_display(VideoState *s)
         SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
 
         for (ch = 1; ch < nb_display_channels; ch++) {
-            y = s->ytop + ch * h;
-            fill_rectangle(s->xleft, y, s->width, 1);
+            y = ytop() + ch * h;
+            fill_rectangle(xleft(), y, width(), 1);
         }
     } else {
         int err = 0;
-        if (realloc_texture(&s->vis_texture, SDL_PIXELFORMAT_ARGB8888, s->width, s->height, SDL_BLENDMODE_NONE, 1) < 0)
+        if (realloc_texture(&s->vis_texture, SDL_PIXELFORMAT_ARGB8888, width(), height(), SDL_BLENDMODE_NONE, 1) < 0)
             return;
 
-        if (s->xpos >= s->width)
-            s->xpos = 0;
+        if (xpos() >= width())
+            setXpos (0);
         nb_display_channels= FFMIN(nb_display_channels, 2);
         if (rdft_bits != s->rdft_bits) {
             const float rdft_scale = 1.0;
@@ -204,7 +203,7 @@ static void video_audio_display(VideoState *s)
         } else {
             float *data_in[2];
             AVComplexFloat *data[2];
-            SDL_Rect rect = {.x = s->xpos, .y = 0, .w = 1, .h = s->height};
+            SDL_Rect rect = {.x = xpos(), .y = 0, .w = 1, .h = height()};
             uint32_t *pixels;
             int pitch;
             for (ch = 0; ch < nb_display_channels; ch++) {
@@ -226,8 +225,8 @@ static void video_audio_display(VideoState *s)
              * directly access it but it is more than fast enough. */
             if (!SDL_LockTexture(s->vis_texture, &rect, (void **)&pixels, &pitch)) {
                 pitch >>= 2;
-                pixels += pitch * s->height;
-                for (y = 0; y < s->height; y++) {
+                pixels += pitch * height();
+                for (y = 0; y < height(); y++) {
                     double w = 1 / sqrt(nb_freq);
                     int a = sqrt(w * sqrt(data[0][y].re * data[0][y].re + data[0][y].im * data[0][y].im));
                     int b = (nb_display_channels == 2 ) ? sqrt(w * hypot(data[1][y].re, data[1][y].im))
@@ -241,8 +240,10 @@ static void video_audio_display(VideoState *s)
             }
             SDL_RenderCopy(renderer, s->vis_texture, NULL, NULL);
         }
-        if (!rGlobal.paused())
-            s->xpos++;
+        if (!rGlobal.paused()) {
+            setXpos(xpos() + 1);
+            // s->xpos++;
+        }
     }
 }
 static void cleanVideoDec()
@@ -314,7 +315,8 @@ static void stream_component_close(VideoState *is, int stream_index)
     }
 }
 
-
+extern "C"
+{
 void stream_close(VideoState *is)
 {
     /* XXX: use a special url_shutdown call to abort parse cleanly */
@@ -339,6 +341,7 @@ void stream_close(VideoState *is)
         SDL_DestroyTexture(is->sub_texture);
     av_free(is);
 }
+} //extern "C"
 
 void do_exit(VideoState *is)
 {
@@ -554,7 +557,7 @@ void cpp_stream_toggle_pause(VideoState *is)
     rAudClk.setPaused(bP);
     rExtclk.setPaused(bP);
 }
-}
+
 
 static void step_to_next_frame(VideoState *is)
 {
@@ -693,9 +696,7 @@ static void update_video_pts(VideoState *is, double pts, int serial)
     cpp_sync_clock_to_slave(rExtclk, rVidClk);
 }
 
-extern "C"
-{
-void cpp_video_image_display(VideoState *is)
+void mainUserLogic::cpp_video_image_display(VideoState *is)
 {
     // Frame *vp;
     // Frame *sp = NULL;
@@ -765,7 +766,7 @@ void cpp_video_image_display(VideoState *is)
         }
     }
 
-    calculate_display_rect(&rect, is->xleft, is->ytop, is->width, is->height, vp->width, vp->height, vp->sar);
+    calculate_display_rect(&rect, xleft(), ytop(), width(), height(), vp->width, vp->height, vp->sar);
     set_sdl_yuv_conversion_mode(vp->frame);
 
     if (!vp->uploaded) {
@@ -798,7 +799,7 @@ void cpp_video_image_display(VideoState *is)
     }
 }
 
-static int video_open(VideoState *is)
+int mainUserLogic::video_open(VideoState *is)
 {
     int w,h;
 
@@ -814,18 +815,19 @@ static int video_open(VideoState *is)
     if (is_full_screen)
         SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     SDL_ShowWindow(window);
-
-    is->width  = w;
-    is->height = h;
+    setWidth(w);
+    setHeight(h);
+    //is->width  = w;
+    //is->height = h;
 
     return 0;
 }
 
 /* display the current picture, if any */
-static void video_display(VideoState *is)
+void mainUserLogic::video_display(VideoState *is)
 {
     auto& rGlobal = tSingleton<globalData>::single();
-    if (!is->width)
+    if (!width())
         video_open(is);
 
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -1054,7 +1056,6 @@ void mainUserLogic::refresh_loop_wait_event(VideoState *is, SDL_Event *event) {
     }
 }
 
-}
 
 int mainUserLogic::ffplay_event_loop()
 {
@@ -1075,7 +1076,7 @@ int mainUserLogic::ffplay_event_loop()
                 break;
             }
             // If we don't yet have a window, skip all key events, because read_thread might still be initializing...
-            if (!cur_stream->width)
+            if (!width())
                 continue;
             switch (event.key.keysym.sym) {
             case SDLK_f:
@@ -1215,7 +1216,7 @@ int mainUserLogic::ffplay_event_loop()
             }
                 if (seek_by_bytes || cur_stream->ic->duration <= 0) {
                     uint64_t size =  avio_size(cur_stream->ic->pb);
-                    stream_seek(cur_stream, size*x/cur_stream->width, 0, 1);
+                    stream_seek(cur_stream, size*x/width(), 0, 1);
                 } else {
                     int64_t ts;
                     int ns, hh, mm, ss;
@@ -1224,7 +1225,7 @@ int mainUserLogic::ffplay_event_loop()
                     thh  = tns / 3600;
                     tmm  = (tns % 3600) / 60;
                     tss  = (tns % 60);
-                    frac = x / cur_stream->width;
+                    frac = x / width();
                     ns   = frac * tns;
                     hh   = ns / 3600;
                     mm   = (ns % 3600) / 60;
@@ -1241,8 +1242,10 @@ int mainUserLogic::ffplay_event_loop()
         case SDL_WINDOWEVENT:
             switch (event.window.event) {
                 case SDL_WINDOWEVENT_SIZE_CHANGED:
-                    screen_width  = cur_stream->width  = event.window.data1;
-                    screen_height = cur_stream->height = event.window.data2;
+                    setWidth(event.window.data1);
+                    setHeight(event.window.data2);
+                    screen_width  = event.window.data1;
+                    screen_height = event.window.data2;
                     if (cur_stream->vis_texture) {
                         SDL_DestroyTexture(cur_stream->vis_texture);
                         cur_stream->vis_texture = NULL;
@@ -1279,5 +1282,56 @@ void  mainUserLogic:: setForceRefresh (bool v)
 logicWorker& mainUserLogic:: worker()
 {
     return getServer();
+}
+
+int  mainUserLogic:: width ()
+{
+    return m_width;
+}
+
+void  mainUserLogic:: setWidth (int v)
+{
+    m_width = v;
+}
+
+int  mainUserLogic:: height ()
+{
+    return m_height;
+}
+
+void  mainUserLogic:: setHeight (int v)
+{
+    m_height = v;
+}
+
+int  mainUserLogic:: xleft ()
+{
+    return m_xleft;
+}
+
+void  mainUserLogic:: setXleft (int v)
+{
+    m_xleft = v;
+}
+
+int  mainUserLogic:: ytop ()
+{
+    return m_ytop;
+}
+
+void  mainUserLogic:: setYtop (int v)
+{
+    m_ytop = v;
+}
+
+
+int  mainUserLogic:: xpos ()
+{
+    return m_xpos;
+}
+
+void  mainUserLogic:: setXpos (int v)
+{
+    m_xpos = v;
 }
 

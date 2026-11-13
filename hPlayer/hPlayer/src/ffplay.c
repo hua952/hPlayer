@@ -36,7 +36,7 @@ int cpp_queue_picture(VideoState *is, AVFrame *src_frame, double pts, double dur
 /*int64_t  cpp_video_frame_queue_last_pos();
 int64_t cpp_audio_frame_queue_last_pos();*/
 void cpp_stream_toggle_pause(VideoState *is);
-void cpp_video_image_display(VideoState *is);
+/*void cpp_video_image_display(VideoState *is);*/
 const char program_name[] = "ffplay";
 const int program_birth_year = 2003;
 const AVInputFormat *file_iformat;
@@ -740,9 +740,10 @@ static VideoState *stream_open(const char *filename/*,
     if (!is->filename)
         goto fail;
     /*is->iformat = iformat;*/
+    /*
     is->ytop    = 0;
     is->xleft   = 0;
-
+    */
     /* start video display */
     /*
     if (video_frame_queue_init(&is->pictq, NULL, VIDEO_PICTURE_QUEUE_SIZE, 1) < 0)

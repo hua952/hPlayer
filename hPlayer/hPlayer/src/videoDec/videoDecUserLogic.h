@@ -36,6 +36,7 @@ public:
     int  initVideo(int stream_index);
 private:
     double frame_last_returned_time{0};
+    double frame_last_filter_delay{0};
     AVFilterContext*  m_out_video_filter{nullptr};
     AVFilterContext*  m_in_video_filter{nullptr};
     AVFrame* m_frame {nullptr};
@@ -50,4 +51,6 @@ private:
     int m_last_vfilter_idx = 0;
     videoDec& m_rvideoDec;
     videoDecLogicState  m_state{videoDecLogicState_readNotInit};
+private:
+    int cpp_get_video_frame(VideoState *is, AVFrame *frame);
 };

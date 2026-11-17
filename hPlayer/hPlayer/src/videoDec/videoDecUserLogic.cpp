@@ -306,7 +306,7 @@ int   videoDecUserLogic:: initThis()
     return nRet;
 }
 
-int cpp_get_video_frame(VideoState *is, AVFrame *frame)
+int videoDecUserLogic::cpp_get_video_frame(VideoState *is, AVFrame *frame)
 {
     int got_picture;
 
@@ -330,7 +330,7 @@ int cpp_get_video_frame(VideoState *is, AVFrame *frame)
             if (frame->pts != AV_NOPTS_VALUE) {
                 double diff = dpts - cpp_get_master_clock(is);
                 if (!isnan(diff) && fabs(diff) < AV_NOSYNC_THRESHOLD &&
-                    diff - is->frame_last_filter_delay < 0 &&
+                    (diff - frame_last_filter_delay) < 0 &&
                     rDecoder.pkt_serial == rVidPackQ.serial() &&
                     vSize) {
                     is->frame_drops_early++;
@@ -449,9 +449,9 @@ int videoDecUserLogic::onLoopFrame()
 
             fd = frame->opaque_ref ? (FrameData*)frame->opaque_ref->data : NULL;
 
-            is->frame_last_filter_delay = av_gettime_relative() / 1000000.0 - frame_last_returned_time;
-            if (fabs(is->frame_last_filter_delay) > AV_NOSYNC_THRESHOLD / 10.0)
-                is->frame_last_filter_delay = 0;
+            frame_last_filter_delay = av_gettime_relative() / 1000000.0 - frame_last_returned_time;
+            if (fabs(frame_last_filter_delay) > AV_NOSYNC_THRESHOLD / 10.0)
+                frame_last_filter_delay = 0;
             auto tb = av_buffersink_get_time_base(filt_out);
             AVRational tbTemp;
             tbTemp.num = frame_rate.den; tbTemp.den = frame_rate.num;

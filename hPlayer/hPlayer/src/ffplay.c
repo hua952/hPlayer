@@ -35,7 +35,7 @@ double cpp_get_master_clock(VideoState *is);
 int cpp_queue_picture(VideoState *is, AVFrame *src_frame, double pts, double duration, int64_t pos, int serial);
 /*int64_t  cpp_video_frame_queue_last_pos();
 int64_t cpp_audio_frame_queue_last_pos();*/
-void cpp_stream_toggle_pause(VideoState *is);
+/*void cpp_stream_toggle_pause(VideoState *is);*/
 /*void cpp_video_image_display(VideoState *is);*/
 const char program_name[] = "ffplay";
 const int program_birth_year = 2003;

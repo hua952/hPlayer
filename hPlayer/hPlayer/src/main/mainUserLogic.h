@@ -44,6 +44,7 @@ public:
     double  max_frame_duration ();
     void  setMax_frame_duration (double v);
 private:
+    double frame_timer{0};
     double last_vis_time{0};
     // AVStream* subtitle_st{nullptr};
     SDL_Texture* vis_texture{nullptr};
@@ -61,6 +62,7 @@ private:
     main& m_rmain;
     mainState   m_mainState = mainState_noWindow;
 private:
+    void cpp_stream_toggle_pause(VideoState *is);
     double cpp_compute_target_delay(double delay, VideoState *is);
     double vp_duration(VideoState *is, cppFrame *vp, cppFrame *nextvp);
     void toggle_pause(VideoState *is);

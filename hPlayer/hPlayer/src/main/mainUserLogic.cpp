@@ -21,7 +21,6 @@ double mainUserLogic::vp_duration(VideoState *is, cppFrame *vp, cppFrame *nextvp
 }
 
 
-void cpp_stream_toggle_pause(VideoState *is);
 int64_t cpp_video_frame_queue_last_pos()
 {
     auto& rGlobal = tSingleton<globalData>::single();
@@ -531,7 +530,8 @@ double mainUserLogic::cpp_compute_target_delay(double delay, VideoState *is)
 
     return delay;
 }
-void cpp_stream_toggle_pause(VideoState *is)
+
+void mainUserLogic::cpp_stream_toggle_pause(VideoState *is)
 {
 
     auto& rGlobal = tSingleton<globalData>::single();
@@ -542,7 +542,7 @@ void cpp_stream_toggle_pause(VideoState *is)
     auto bP = rGlobal.paused();
     if (rGlobal.paused()) {
         // is->frame_timer += av_gettime_relative() / 1000000.0 - is->vidclk.last_updated;
-        is->frame_timer += av_gettime_relative() / 1000000.0 - rVidClk.lastUpdated();
+        frame_timer += av_gettime_relative() / 1000000.0 - rVidClk.lastUpdated();
         if (is->read_pause_return != AVERROR(ENOSYS)) {
             // is->vidclk.paused = 0;
             rVidClk.setPaused(0);
@@ -896,7 +896,7 @@ retry:
             }
 
             if (lastvp->serial != vp->serial)
-                is->frame_timer = av_gettime_relative() / 1000000.0;
+                frame_timer = av_gettime_relative() / 1000000.0;
 
             if (rGlobal.paused())
                 goto display;
@@ -906,14 +906,14 @@ retry:
             delay = cpp_compute_target_delay(last_duration, is);
 
             time= av_gettime_relative()/1000000.0;
-            if (time < is->frame_timer + delay) {
-                *remaining_time = FFMIN(is->frame_timer + delay - time, *remaining_time);
+            if (time < frame_timer + delay) {
+                *remaining_time = FFMIN(frame_timer + delay - time, *remaining_time);
                 goto display;
             }
 
-            is->frame_timer += delay;
-            if (delay > 0 && time - is->frame_timer > AV_SYNC_THRESHOLD_MAX)
-                is->frame_timer = time;
+            frame_timer += delay;
+            if (delay > 0 && time - frame_timer > AV_SYNC_THRESHOLD_MAX)
+                frame_timer = time;
 
             // SDL_LockMutex(is->pictq.mutex);
             if (!isnan(vp->pts))
@@ -925,7 +925,7 @@ retry:
                 // Frame *nextvp = frame_queue_peek_next(&is->pictq);
                 auto nextvp = rPictQ.nextFrame();
                 duration = vp_duration(is, vp, nextvp);
-                if(!step() && (framedrop>0 || (framedrop && cpp_get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER)) && time > is->frame_timer + duration){
+                if(!step() && (framedrop>0 || (framedrop && cpp_get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER)) && time > frame_timer + duration){
                     is->frame_drops_late++;
                     // frame_queue_next(&is->pictq);
                     rPictQ.popFrame();

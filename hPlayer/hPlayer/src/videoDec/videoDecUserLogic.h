@@ -35,6 +35,7 @@ public:
     void  setOut_video_filter (AVFilterContext* v);
     int  initVideo(int stream_index);
 private:
+    double frame_last_returned_time{0};
     AVFilterContext*  m_out_video_filter{nullptr};
     AVFilterContext*  m_in_video_filter{nullptr};
     AVFrame* m_frame {nullptr};

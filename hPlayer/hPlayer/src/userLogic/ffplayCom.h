@@ -182,8 +182,8 @@ typedef struct VideoState {
     int subtitle_stream;
     AVStream *subtitle_st;
     double frame_timer;
-    */
     double frame_last_returned_time;
+    */
     double frame_last_filter_delay;
     /*int video_stream;
     AVStream *video_st;

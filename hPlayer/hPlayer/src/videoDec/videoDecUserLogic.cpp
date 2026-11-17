@@ -437,7 +437,7 @@ int videoDecUserLogic::onLoopFrame()
         while (ret >= 0) {
             FrameData *fd;
 
-            is->frame_last_returned_time = av_gettime_relative() / 1000000.0;
+            frame_last_returned_time = av_gettime_relative() / 1000000.0;
 
             ret = av_buffersink_get_frame_flags(filt_out, frame, 0);
             if (ret < 0) {
@@ -449,7 +449,7 @@ int videoDecUserLogic::onLoopFrame()
 
             fd = frame->opaque_ref ? (FrameData*)frame->opaque_ref->data : NULL;
 
-            is->frame_last_filter_delay = av_gettime_relative() / 1000000.0 - is->frame_last_returned_time;
+            is->frame_last_filter_delay = av_gettime_relative() / 1000000.0 - frame_last_returned_time;
             if (fabs(is->frame_last_filter_delay) > AV_NOSYNC_THRESHOLD / 10.0)
                 is->frame_last_filter_delay = 0;
             auto tb = av_buffersink_get_time_base(filt_out);

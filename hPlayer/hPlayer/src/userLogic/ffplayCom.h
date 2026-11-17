@@ -171,8 +171,8 @@ typedef struct VideoState {
     AVTXContext *rdft;
     av_tx_fn rdft_fn;
     int rdft_bits;
-    float *real_data;
     /*
+    float *real_data;
     AVComplexFloat *rdft_data;
     int xpos;
     double last_vis_time;

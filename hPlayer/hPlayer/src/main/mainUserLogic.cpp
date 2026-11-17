@@ -188,10 +188,10 @@ void mainUserLogic::video_audio_display(VideoState *s)
         if (rdft_bits != s->rdft_bits) {
             const float rdft_scale = 1.0;
             av_tx_uninit(&s->rdft);
-            av_freep(&s->real_data);
+            av_freep(&real_data);
             av_freep(&rdft_data);
             s->rdft_bits = rdft_bits;
-            s->real_data = (float*)av_malloc_array(nb_freq, 4 *sizeof(*s->real_data));
+            real_data = (float*)av_malloc_array(nb_freq, 4 *sizeof(*real_data));
             rdft_data = (AVComplexFloat*)av_malloc_array(nb_freq + 1, 2 *sizeof(*rdft_data));
             err = av_tx_init(&s->rdft, &s->rdft_fn, AV_TX_FLOAT_RDFT,
                              0, 1 << rdft_bits, &rdft_scale, 0);
@@ -206,7 +206,7 @@ void mainUserLogic::video_audio_display(VideoState *s)
             uint32_t *pixels;
             int pitch;
             for (ch = 0; ch < nb_display_channels; ch++) {
-                data_in[ch] = s->real_data + 2 * nb_freq * ch;
+                data_in[ch] = real_data + 2 * nb_freq * ch;
                 data[ch] = rdft_data + nb_freq * ch;
                 i = i_start + ch;
                 for (x = 0; x < 2 * nb_freq; x++) {
@@ -274,7 +274,7 @@ static void stream_component_close(VideoState *is, int stream_index)
 
         if (is->rdft) {
             av_tx_uninit(&is->rdft);
-            av_freep(&is->real_data);
+            //av_freep(&is->real_data);
             // av_freep(&is->rdft_data);
             is->rdft = NULL;
             is->rdft_bits = 0;
@@ -634,6 +634,8 @@ int mainUserLogic::onLoopEnd()
     }
         // subtitle_st = nullptr;
 
+
+        av_freep(&real_data);
         av_freep(&rdft_data);
     } while (0);
     return nRet;

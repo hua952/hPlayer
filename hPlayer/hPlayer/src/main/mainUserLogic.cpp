@@ -189,14 +189,14 @@ void mainUserLogic::video_audio_display(VideoState *s)
             const float rdft_scale = 1.0;
             av_tx_uninit(&s->rdft);
             av_freep(&s->real_data);
-            av_freep(&s->rdft_data);
+            av_freep(&rdft_data);
             s->rdft_bits = rdft_bits;
             s->real_data = (float*)av_malloc_array(nb_freq, 4 *sizeof(*s->real_data));
-            s->rdft_data = (AVComplexFloat*)av_malloc_array(nb_freq + 1, 2 *sizeof(*s->rdft_data));
+            rdft_data = (AVComplexFloat*)av_malloc_array(nb_freq + 1, 2 *sizeof(*rdft_data));
             err = av_tx_init(&s->rdft, &s->rdft_fn, AV_TX_FLOAT_RDFT,
                              0, 1 << rdft_bits, &rdft_scale, 0);
         }
-        if (err < 0 || !s->rdft_data) {
+        if (err < 0 || !rdft_data) {
             av_log(NULL, AV_LOG_ERROR, "Failed to allocate buffers for RDFT, switching to waves display\n");
             rGlobal.setShowMode(VideoState::SHOW_MODE_WAVES);
         } else {
@@ -207,7 +207,7 @@ void mainUserLogic::video_audio_display(VideoState *s)
             int pitch;
             for (ch = 0; ch < nb_display_channels; ch++) {
                 data_in[ch] = s->real_data + 2 * nb_freq * ch;
-                data[ch] = s->rdft_data + nb_freq * ch;
+                data[ch] = rdft_data + nb_freq * ch;
                 i = i_start + ch;
                 for (x = 0; x < 2 * nb_freq; x++) {
                     double w = (x-nb_freq) * (1.0 / nb_freq);
@@ -275,7 +275,7 @@ static void stream_component_close(VideoState *is, int stream_index)
         if (is->rdft) {
             av_tx_uninit(&is->rdft);
             av_freep(&is->real_data);
-            av_freep(&is->rdft_data);
+            // av_freep(&is->rdft_data);
             is->rdft = NULL;
             is->rdft_bits = 0;
         }
@@ -633,6 +633,8 @@ int mainUserLogic::onLoopEnd()
         SDL_DestroyTexture(sub_texture);
     }
         // subtitle_st = nullptr;
+
+        av_freep(&rdft_data);
     } while (0);
     return nRet;
 }

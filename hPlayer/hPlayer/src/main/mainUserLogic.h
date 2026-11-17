@@ -44,6 +44,7 @@ public:
     double  max_frame_duration ();
     void  setMax_frame_duration (double v);
 private:
+    AVComplexFloat* rdft_data{nullptr};
     double frame_timer{0};
     double last_vis_time{0};
     // AVStream* subtitle_st{nullptr};

@@ -44,6 +44,10 @@ public:
     double  max_frame_duration ();
     void  setMax_frame_duration (double v);
 private:
+
+    SDL_Texture* vis_texture{nullptr};
+    SDL_Texture* sub_texture{nullptr};
+    SDL_Texture* vid_texture{nullptr};
     struct SwsContext* m_sub_convert_ctx{nullptr};
     double  m_max_frame_duration{std::numeric_limits<double>::quiet_NaN()};
     int  m_step{0};

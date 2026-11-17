@@ -180,7 +180,7 @@ void mainUserLogic::video_audio_display(VideoState *s)
         }
     } else {
         int err = 0;
-        if (realloc_texture(&s->vis_texture, SDL_PIXELFORMAT_ARGB8888, width(), height(), SDL_BLENDMODE_NONE, 1) < 0)
+        if (realloc_texture(&vis_texture, SDL_PIXELFORMAT_ARGB8888, width(), height(), SDL_BLENDMODE_NONE, 1) < 0)
             return;
 
         if (xpos() >= width())
@@ -223,7 +223,7 @@ void mainUserLogic::video_audio_display(VideoState *s)
             }
             /* Least efficient way to do this, we should of course
              * directly access it but it is more than fast enough. */
-            if (!SDL_LockTexture(s->vis_texture, &rect, (void **)&pixels, &pitch)) {
+            if (!SDL_LockTexture(vis_texture, &rect, (void **)&pixels, &pitch)) {
                 pitch >>= 2;
                 pixels += pitch * height();
                 for (y = 0; y < height(); y++) {
@@ -236,9 +236,9 @@ void mainUserLogic::video_audio_display(VideoState *s)
                     pixels -= pitch;
                     *pixels = (a << 16) + (b << 8) + ((a+b) >> 1);
                 }
-                SDL_UnlockTexture(s->vis_texture);
+                SDL_UnlockTexture(vis_texture);
             }
-            SDL_RenderCopy(renderer, s->vis_texture, NULL, NULL);
+            SDL_RenderCopy(renderer, vis_texture, NULL, NULL);
         }
         if (!rGlobal.paused()) {
             setXpos(xpos() + 1);
@@ -333,12 +333,14 @@ void stream_close(VideoState *is)
 
     // sws_freeContext(is->sub_convert_ctx);
     av_free(is->filename);
+    /*
     if (is->vis_texture)
         SDL_DestroyTexture(is->vis_texture);
     if (is->vid_texture)
         SDL_DestroyTexture(is->vid_texture);
     if (is->sub_texture)
         SDL_DestroyTexture(is->sub_texture);
+        */
     av_free(is);
 }
 } //extern "C"
@@ -623,6 +625,12 @@ int mainUserLogic::onLoopEnd()
         if(m_sub_convert_ctx) {
             sws_freeContext(m_sub_convert_ctx);
         }
+    if (vis_texture)
+        SDL_DestroyTexture(vis_texture);
+    if (vid_texture)
+        SDL_DestroyTexture(vid_texture);
+    if (sub_texture)
+        SDL_DestroyTexture(sub_texture);
     } while (0);
     return nRet;
 }
@@ -727,7 +735,7 @@ void mainUserLogic::cpp_video_image_display(VideoState *is)
                         sp->width = vp->width;
                         sp->height = vp->height;
                     }
-                    if (realloc_texture(&is->sub_texture, SDL_PIXELFORMAT_ARGB8888, sp->width, sp->height, SDL_BLENDMODE_BLEND, 1) < 0)
+                    if (realloc_texture(&sub_texture, SDL_PIXELFORMAT_ARGB8888, sp->width, sp->height, SDL_BLENDMODE_BLEND, 1) < 0)
                         return;
 
                     for (i = 0; i < sp->sub.num_rects; i++) {
@@ -746,10 +754,10 @@ void mainUserLogic::cpp_video_image_display(VideoState *is)
                             av_log(NULL, AV_LOG_FATAL, "Cannot initialize the conversion context\n");
                             return;
                         }
-                        if (!SDL_LockTexture(is->sub_texture, (SDL_Rect *)sub_rect, (void **)pixels, pitch)) {
+                        if (!SDL_LockTexture(sub_texture, (SDL_Rect *)sub_rect, (void **)pixels, pitch)) {
                             sws_scale(m_sub_convert_ctx, (const uint8_t * const *)sub_rect->data, sub_rect->linesize,
                                       0, sub_rect->h, pixels, pitch);
-                            SDL_UnlockTexture(is->sub_texture);
+                            SDL_UnlockTexture(sub_texture);
                         }
                     }
                     sp->uploaded = 1;
@@ -764,7 +772,7 @@ void mainUserLogic::cpp_video_image_display(VideoState *is)
     set_sdl_yuv_conversion_mode(vp->frame);
 
     if (!vp->uploaded) {
-        if (upload_texture(&is->vid_texture, vp->frame) < 0) {
+        if (upload_texture(&vid_texture, vp->frame) < 0) {
             set_sdl_yuv_conversion_mode(NULL);
             return;
         }
@@ -772,11 +780,11 @@ void mainUserLogic::cpp_video_image_display(VideoState *is)
         vp->flip_v = vp->frame->linesize[0] < 0;
     }
 
-    SDL_RenderCopyEx(renderer, is->vid_texture, NULL, &rect, 0, NULL, (SDL_RendererFlip)(vp->flip_v ? SDL_FLIP_VERTICAL : 0));
+    SDL_RenderCopyEx(renderer, vid_texture, NULL, &rect, 0, NULL, (SDL_RendererFlip)(vp->flip_v ? SDL_FLIP_VERTICAL : 0));
     set_sdl_yuv_conversion_mode(NULL);
     if (sp) {
 #if USE_ONEPASS_SUBTITLE_RENDER
-        SDL_RenderCopy(renderer, is->sub_texture, NULL, &rect);
+        SDL_RenderCopy(renderer, sub_texture, NULL, &rect);
 #else
         int i;
         double xratio = (double)rect.w / (double)sp->width;
@@ -787,7 +795,7 @@ void mainUserLogic::cpp_video_image_display(VideoState *is)
                                .y = rect.y + sub_rect->y * yratio,
                                .w = sub_rect->w * xratio,
                                .h = sub_rect->h * yratio};
-            SDL_RenderCopy(renderer, is->sub_texture, sub_rect, &target);
+            SDL_RenderCopy(renderer, sub_texture, sub_rect, &target);
         }
 #endif
     }
@@ -947,10 +955,10 @@ retry:
                                 uint8_t *pixels;
                                 int pitch, j;
 
-                                if (!SDL_LockTexture(is->sub_texture, (SDL_Rect *)sub_rect, (void **)&pixels, &pitch)) {
+                                if (!SDL_LockTexture(sub_texture, (SDL_Rect *)sub_rect, (void **)&pixels, &pitch)) {
                                     for (j = 0; j < sub_rect->h; j++, pixels += pitch)
                                         memset(pixels, 0, sub_rect->w << 2);
-                                    SDL_UnlockTexture(is->sub_texture);
+                                    SDL_UnlockTexture(sub_texture);
                                 }
                             }
                         }
@@ -1246,9 +1254,9 @@ int mainUserLogic::ffplay_event_loop()
                     setHeight(event.window.data2);
                     screen_width  = event.window.data1;
                     screen_height = event.window.data2;
-                    if (cur_stream->vis_texture) {
-                        SDL_DestroyTexture(cur_stream->vis_texture);
-                        cur_stream->vis_texture = NULL;
+                    if (vis_texture) {
+                        SDL_DestroyTexture(vis_texture);
+                        vis_texture = nullptr;
                     }
                     if (vk_renderer)
                         vk_renderer_resize(vk_renderer, screen_width, screen_height);

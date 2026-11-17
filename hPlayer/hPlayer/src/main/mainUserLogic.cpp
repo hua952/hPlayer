@@ -867,11 +867,11 @@ void mainUserLogic::cpp_video_refresh(void *opaque, double *remaining_time)
 
     if (!display_disable && rGlobal.showMode() != VideoState::SHOW_MODE_VIDEO && is->audio_st) {
         time = av_gettime_relative() / 1000000.0;
-        if (forceRefresh() || is->last_vis_time + rdftspeed < time) {
+        if (forceRefresh() || last_vis_time + rdftspeed < time) {
             video_display(is);
-            is->last_vis_time = time;
+            last_vis_time = time;
         }
-        *remaining_time = FFMIN(*remaining_time, is->last_vis_time + rdftspeed - time);
+        *remaining_time = FFMIN(*remaining_time, last_vis_time + rdftspeed - time);
     }
 
     if (rGlobal.videoSt()) {

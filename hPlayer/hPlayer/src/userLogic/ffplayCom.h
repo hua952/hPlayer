@@ -173,9 +173,8 @@ typedef struct VideoState {
     int rdft_bits;
     float *real_data;
     AVComplexFloat *rdft_data;
-    /*int xpos;*/
+    /*int xpos;
     double last_vis_time;
-    /*
     SDL_Texture *vis_texture;
     SDL_Texture *sub_texture;
     SDL_Texture *vid_texture;

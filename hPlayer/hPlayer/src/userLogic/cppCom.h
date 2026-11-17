@@ -69,6 +69,8 @@ struct globalData
     int   sample_array_index();
     void  setSample_array_index(int nI);
     int16_t*  sample_array();
+    int   frame_drops_early();
+    void   setFrame_drops_early(int);
 private:
     int16_t m_sample_array[SAMPLE_ARRAY_SIZE];
     AVStream*  m_videoSt{nullptr};
@@ -76,6 +78,7 @@ private:
     int  m_audioStream{-1};
     int  m_videoStream{-1};
 
+    std::atomic<int> m_frame_drops_early{0};
     std::atomic<int> m_sample_array_index{0};
     std::atomic<int> m_vfilter_idx{0};
     std::atomic<int> m_show_mode{-1};

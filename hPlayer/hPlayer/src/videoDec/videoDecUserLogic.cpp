@@ -333,7 +333,7 @@ int videoDecUserLogic::cpp_get_video_frame(VideoState *is, AVFrame *frame)
                     (diff - frame_last_filter_delay) < 0 &&
                     rDecoder.pkt_serial == rVidPackQ.serial() &&
                     vSize) {
-                    is->frame_drops_early++;
+                    rGlobal.setFrame_drops_early(rGlobal.frame_drops_early()+1);
                     av_frame_unref(frame);
                     got_picture = 0;
                 }

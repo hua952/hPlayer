@@ -223,6 +223,16 @@ globalData::globalData ():m_audioPackQ(64), m_subPackQ(10), vidClk(&vidPackQ), m
 {
 }
 
+int  globalData:: frame_drops_early()
+{
+    return m_frame_drops_early.load(std::memory_order_relaxed);
+}
+
+void  globalData:: setFrame_drops_early(int)
+{
+    m_frame_drops_early.store(nI, std::memory_order_relaxed);
+}
+
 int    globalData:: sample_array_index()
 {
     return m_sample_array_index.load(std::memory_order_relaxed);

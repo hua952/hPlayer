@@ -930,7 +930,7 @@ retry:
                 auto nextvp = rPictQ.nextFrame();
                 duration = vp_duration(is, vp, nextvp);
                 if(!step() && (framedrop>0 || (framedrop && cpp_get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER)) && time > frame_timer + duration){
-                    is->frame_drops_late++;
+                    frame_drops_late++;
                     // frame_queue_next(&is->pictq);
                     rPictQ.popFrame();
                     goto retry;
@@ -1029,7 +1029,7 @@ display:
                       cpp_get_master_clock(is),
                       (is->audio_st && rGlobal.videoSt()) ? "A-V" : (rGlobal.videoSt() ? "M-V" : (is->audio_st ? "M-A" : "   ")),
                       av_diff,
-                      is->frame_drops_early + is->frame_drops_late,
+                      rGlobal.frame_drops_early() + frame_drops_late,
                       aqsize / 1024,
                       vqsize / 1024,
                       sqsize);

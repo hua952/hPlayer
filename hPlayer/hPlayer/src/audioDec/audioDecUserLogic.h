@@ -32,10 +32,13 @@ public:
     void  clean();
     bufQue&  getBufQue ();
 
+    int audio_decode_frame(VideoState *is);
     logicWorker&  worker() override;
     int  initAudio(int stream_index);
 
 private:
+
+    struct SwrContext* swr_ctx {nullptr};
     AVFilterGraph *agraph {nullptr};              // audio filter graph
     AVFilterContext *in_audio_filter {nullptr};   // the first filter in the audio chain
     AVFilterContext *out_audio_filter {nullptr};  // the last filter in the audio chain

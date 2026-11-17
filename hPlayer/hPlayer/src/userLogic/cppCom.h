@@ -70,7 +70,7 @@ struct globalData
     void  setSample_array_index(int nI);
     int16_t*  sample_array();
     int   frame_drops_early();
-    void   setFrame_drops_early(int);
+    void   setFrame_drops_early(int nI);
 private:
     int16_t m_sample_array[SAMPLE_ARRAY_SIZE];
     AVStream*  m_videoSt{nullptr};

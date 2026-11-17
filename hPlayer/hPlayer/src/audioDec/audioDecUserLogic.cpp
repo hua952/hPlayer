@@ -129,7 +129,7 @@ static int synchronize_audio(VideoState *is, int nb_samples)
  * stored in is->audio_buf, with size in bytes given by the return
  * value.
  */
-static int audio_decode_frame(VideoState *is)
+int audioDecUserLogic::audio_decode_frame(VideoState *is)
 {
     int data_size, resampled_data_size;
     av_unused double audio_clock0;
@@ -168,19 +168,19 @@ static int audio_decode_frame(VideoState *is)
     if (af->frame->format        != is->audio_src.fmt            ||
         av_channel_layout_compare(&af->frame->ch_layout, &is->audio_src.ch_layout) ||
         af->frame->sample_rate   != is->audio_src.freq           ||
-        (wanted_nb_samples       != af->frame->nb_samples && !is->swr_ctx)) {
+        (wanted_nb_samples       != af->frame->nb_samples && !swr_ctx)) {
         int ret;
-        swr_free(&is->swr_ctx);
-        ret = swr_alloc_set_opts2(&is->swr_ctx,
+        swr_free(&swr_ctx);
+        ret = swr_alloc_set_opts2(&swr_ctx,
                             &is->audio_tgt.ch_layout, is->audio_tgt.fmt, is->audio_tgt.freq,
                             &af->frame->ch_layout, (AVSampleFormat)(af->frame->format), af->frame->sample_rate,
                             0, NULL);
-        if (ret < 0 || swr_init(is->swr_ctx) < 0) {
+        if (ret < 0 || swr_init(swr_ctx) < 0) {
             av_log(NULL, AV_LOG_ERROR,
                    "Cannot create sample rate converter for conversion of %d Hz %s %d channels to %d Hz %s %d channels!\n",
                     af->frame->sample_rate, av_get_sample_fmt_name((AVSampleFormat)(af->frame->format)), af->frame->ch_layout.nb_channels,
                     is->audio_tgt.freq, av_get_sample_fmt_name((AVSampleFormat)(is->audio_tgt.fmt)), is->audio_tgt.ch_layout.nb_channels);
-            swr_free(&is->swr_ctx);
+            swr_free(&swr_ctx);
             return -1;
         }
         if (av_channel_layout_copy(&is->audio_src.ch_layout, &af->frame->ch_layout) < 0)
@@ -189,7 +189,7 @@ static int audio_decode_frame(VideoState *is)
         is->audio_src.fmt = (AVSampleFormat)(af->frame->format);
     }
 
-    if (is->swr_ctx) {
+    if (swr_ctx) {
         const uint8_t **in = (const uint8_t **)af->frame->extended_data;
         uint8_t **out = &is->audio_buf1;
         int out_count = (int64_t)wanted_nb_samples * is->audio_tgt.freq / af->frame->sample_rate + 256;
@@ -200,7 +200,7 @@ static int audio_decode_frame(VideoState *is)
             return -1;
         }
         if (wanted_nb_samples != af->frame->nb_samples) {
-            if (swr_set_compensation(is->swr_ctx, (wanted_nb_samples - af->frame->nb_samples) * is->audio_tgt.freq / af->frame->sample_rate,
+            if (swr_set_compensation(swr_ctx, (wanted_nb_samples - af->frame->nb_samples) * is->audio_tgt.freq / af->frame->sample_rate,
                                         wanted_nb_samples * is->audio_tgt.freq / af->frame->sample_rate) < 0) {
                 av_log(NULL, AV_LOG_ERROR, "swr_set_compensation() failed\n");
                 return -1;
@@ -209,15 +209,15 @@ static int audio_decode_frame(VideoState *is)
         av_fast_malloc(&is->audio_buf1, &is->audio_buf1_size, out_size);
         if (!is->audio_buf1)
             return AVERROR(ENOMEM);
-        len2 = swr_convert(is->swr_ctx, out, out_count, in, af->frame->nb_samples);
+        len2 = swr_convert(swr_ctx, out, out_count, in, af->frame->nb_samples);
         if (len2 < 0) {
             av_log(NULL, AV_LOG_ERROR, "swr_convert() failed\n");
             return -1;
         }
         if (len2 == out_count) {
             av_log(NULL, AV_LOG_WARNING, "audio buffer is probably too small\n");
-            if (swr_init(is->swr_ctx) < 0)
-                swr_free(&is->swr_ctx);
+            if (swr_init(swr_ctx) < 0)
+                swr_free(&swr_ctx);
         }
         is->audio_buf = is->audio_buf1;
         resampled_data_size = len2 * is->audio_tgt.ch_layout.nb_channels * av_get_bytes_per_sample(is->audio_tgt.fmt);
@@ -273,14 +273,15 @@ static void sdl_audio_callback(void *opaque, Uint8 *stream, int len)
     auto& rAudClk = rGlobal.m_audclk;
     auto& rExtclk = rGlobal.m_extclk;
 
-    VideoState *is = (VideoState*)opaque;
+    VideoState *is = getVideoState();
+    auto pThis = (audioDecUserLogic*)opaque;
     int audio_size, len1;
 
     audio_callback_time = av_gettime_relative();
 
     while (len > 0) {
         if (is->audio_buf_index >= is->audio_buf_size) {
-           audio_size = audio_decode_frame(is);
+           audio_size = pThis->audio_decode_frame(is);
            if (audio_size < 0) {
                 /* if error, just output silence */
                is->audio_buf = NULL;
@@ -493,7 +494,7 @@ int  audioDecUserLogic:: initAudio(int stream_index)
         
 
         /* prepare audio output */
-        if ((ret = audio_open(is, &ch_layout, sample_rate, &is->audio_tgt)) < 0)
+        if ((ret = audio_open(this, &ch_layout, sample_rate, &is->audio_tgt)) < 0)
             goto fail;
         is->audio_hw_buf_size = ret;
         is->audio_src = is->audio_tgt;
@@ -730,11 +731,11 @@ int audioDecUserLogic::onLoopEnd()
 void   audioDecUserLogic:: clean()
 {
     do {
+        VideoState *is = getVideoState ();
+        avfilter_graph_free(&agraph);
+        av_frame_free(&m_frame);
 
-    VideoState *is = getVideoState ();
-    avfilter_graph_free(&agraph);
-    av_frame_free(&m_frame);
-
+        swr_free(&swr_ctx);
     } while (0);
 }
 

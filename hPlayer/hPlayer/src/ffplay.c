@@ -789,7 +789,7 @@ static VideoState *stream_open(const char *filename/*,
         */
     return is;
 fail:
-        /*stream_close(is);*/
+        stream_close(is);
         return NULL;
     /*
     }

@@ -44,6 +44,9 @@ public:
     double  max_frame_duration ();
     void  setMax_frame_duration (double v);
 private:
+    AVTXContext* rdft{nullptr};
+    av_tx_fn rdft_fn{nullptr};
+    int m_rdft_bits{0};
     float* real_data{nullptr};
     AVComplexFloat* rdft_data{nullptr};
     double frame_timer{0};

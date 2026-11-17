@@ -168,10 +168,10 @@ typedef struct VideoState {
     int16_t sample_array[SAMPLE_ARRAY_SIZE];
     int sample_array_index;
     int last_i_start;
+    /*
     AVTXContext *rdft;
     av_tx_fn rdft_fn;
     int rdft_bits;
-    /*
     float *real_data;
     AVComplexFloat *rdft_data;
     int xpos;

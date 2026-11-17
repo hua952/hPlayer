@@ -28,7 +28,7 @@
 
 #include "cmdutils.h"
 
-void stream_close(VideoState *is);
+/*void stream_close(VideoState *is);*/
 void cpp_check_external_clock_speed(VideoState *is);
 /*void cpp_video_refresh(void *opaque, double *remaining_time);*/
 double cpp_get_master_clock(VideoState *is);
@@ -789,7 +789,7 @@ static VideoState *stream_open(const char *filename/*,
         */
     return is;
 fail:
-        stream_close(is);
+        /*stream_close(is);*/
         return NULL;
     /*
     }

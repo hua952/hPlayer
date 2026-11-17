@@ -185,15 +185,15 @@ void mainUserLogic::video_audio_display(VideoState *s)
         if (xpos() >= width())
             setXpos (0);
         nb_display_channels= FFMIN(nb_display_channels, 2);
-        if (rdft_bits != s->rdft_bits) {
+        if (rdft_bits != m_rdft_bits) {
             const float rdft_scale = 1.0;
-            av_tx_uninit(&s->rdft);
+            av_tx_uninit(&rdft);
             av_freep(&real_data);
             av_freep(&rdft_data);
-            s->rdft_bits = rdft_bits;
+            m_rdft_bits = rdft_bits;
             real_data = (float*)av_malloc_array(nb_freq, 4 *sizeof(*real_data));
             rdft_data = (AVComplexFloat*)av_malloc_array(nb_freq + 1, 2 *sizeof(*rdft_data));
-            err = av_tx_init(&s->rdft, &s->rdft_fn, AV_TX_FLOAT_RDFT,
+            err = av_tx_init(&rdft, &rdft_fn, AV_TX_FLOAT_RDFT,
                              0, 1 << rdft_bits, &rdft_scale, 0);
         }
         if (err < 0 || !rdft_data) {
@@ -216,7 +216,7 @@ void mainUserLogic::video_audio_display(VideoState *s)
                     if (i >= SAMPLE_ARRAY_SIZE)
                         i -= SAMPLE_ARRAY_SIZE;
                 }
-                s->rdft_fn(s->rdft, data[ch], data_in[ch], sizeof(float));
+                rdft_fn(rdft, data[ch], data_in[ch], sizeof(float));
                 data[ch][0].im = data[ch][nb_freq].re;
                 data[ch][nb_freq].re = 0;
             }
@@ -264,21 +264,20 @@ static void stream_component_close(VideoState *is, int stream_index)
 
     switch (codecpar->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
-        /*decoder_abort(&is->auddec, &is->sampq);*/
         SDL_CloseAudioDevice(audio_dev);
-        /*decoder_destroy(&is->auddec);*/
         swr_free(&is->swr_ctx);
         av_freep(&is->audio_buf1);
         is->audio_buf1_size = 0;
         is->audio_buf = NULL;
-
+        /*
         if (is->rdft) {
             av_tx_uninit(&is->rdft);
-            //av_freep(&is->real_data);
-            // av_freep(&is->rdft_data);
+            av_freep(&is->real_data);
+            av_freep(&is->rdft_data);
             is->rdft = NULL;
-            is->rdft_bits = 0;
+            m_rdft_bits = 0;
         }
+        */
         break;
     case AVMEDIA_TYPE_VIDEO:
         {
@@ -313,13 +312,11 @@ static void stream_component_close(VideoState *is, int stream_index)
         break;
     }
 }
-
 extern "C"
 {
 void stream_close(VideoState *is)
 {
-    /* XXX: use a special url_shutdown call to abort parse cleanly */
-        /* close each stream */
+    
     auto& rGlobal = tSingleton<globalData>::single();
     if (rGlobal.audioStream() >= 0)
         stream_component_close(is, rGlobal.audioStream());
@@ -332,7 +329,7 @@ void stream_close(VideoState *is)
 
     // sws_freeContext(is->sub_convert_ctx);
     av_free(is->filename);
-    /*
+/*    
     if (is->vis_texture)
         SDL_DestroyTexture(is->vis_texture);
     if (is->vid_texture)
@@ -633,10 +630,13 @@ int mainUserLogic::onLoopEnd()
         SDL_DestroyTexture(sub_texture);
     }
         // subtitle_st = nullptr;
-
-
-        av_freep(&real_data);
-        av_freep(&rdft_data);
+    if (rdft) {
+            av_tx_uninit(&rdft);
+            av_freep(&real_data);
+             av_freep(&rdft_data);
+            rdft = NULL;
+            m_rdft_bits = 0;
+        }
     } while (0);
     return nRet;
 }

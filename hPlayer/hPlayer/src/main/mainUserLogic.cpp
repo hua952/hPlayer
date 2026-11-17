@@ -141,9 +141,9 @@ void mainUserLogic::video_audio_display(VideoState *s)
             }
         }
 
-        s->last_i_start = i_start;
+        last_i_start = i_start;
     } else {
-        i_start = s->last_i_start;
+        i_start = last_i_start;
     }
 
     if (rGlobal.showMode() == VideoState::SHOW_MODE_WAVES) {

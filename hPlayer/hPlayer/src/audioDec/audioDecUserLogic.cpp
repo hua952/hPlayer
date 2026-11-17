@@ -26,12 +26,12 @@ int audioDecUserLogic::configure_audio_filters(VideoState *is, const char *afilt
         aresample_swr_opts[strlen(aresample_swr_opts)-1] = '\0';
     av_opt_set(agraph, "aresample_swr_opts", aresample_swr_opts, 0);
 
-    av_channel_layout_describe_bprint(&is->audio_filter_src.ch_layout, &bp);
+    av_channel_layout_describe_bprint(&audio_filter_src.ch_layout, &bp);
 
     ret = snprintf(asrc_args, sizeof(asrc_args),
                    "sample_rate=%d:sample_fmt=%s:time_base=%d/%d:channel_layout=%s",
-                   is->audio_filter_src.freq, av_get_sample_fmt_name(is->audio_filter_src.fmt),
-                   1, is->audio_filter_src.freq, bp.str);
+                   audio_filter_src.freq, av_get_sample_fmt_name(audio_filter_src.fmt),
+                   1, audio_filter_src.freq, bp.str);
 
     ret = avfilter_graph_create_filter(&filt_asrc,
                                        avfilter_get_by_name("abuffer"), "ffplay_abuffer",
@@ -78,7 +78,7 @@ end:
 
 /* return the wanted number of samples to get better sync if sync_type is video
  * or external master clock */
-static int synchronize_audio(VideoState *is, int nb_samples)
+int audioDecUserLogic::synchronize_audio(VideoState *is, int nb_samples)
 {
     auto& rGlobal = tSingleton<globalData>::single();
     auto& rAudclk = rGlobal.m_audclk;
@@ -103,7 +103,7 @@ static int synchronize_audio(VideoState *is, int nb_samples)
                 avg_diff = is->audio_diff_cum * (1.0 - is->audio_diff_avg_coef);
 
                 if (fabs(avg_diff) >= is->audio_diff_threshold) {
-                    wanted_nb_samples = nb_samples + (int)(diff * is->audio_src.freq);
+                    wanted_nb_samples = nb_samples + (int)(diff * audio_src.freq);
                     min_nb_samples = ((nb_samples * (100 - SAMPLE_CORRECTION_PERCENT_MAX) / 100));
                     max_nb_samples = ((nb_samples * (100 + SAMPLE_CORRECTION_PERCENT_MAX) / 100));
                     wanted_nb_samples = av_clip(wanted_nb_samples, min_nb_samples, max_nb_samples);
@@ -165,9 +165,9 @@ int audioDecUserLogic::audio_decode_frame(VideoState *is)
 
     wanted_nb_samples = synchronize_audio(is, af->frame->nb_samples);
 
-    if (af->frame->format        != is->audio_src.fmt            ||
-        av_channel_layout_compare(&af->frame->ch_layout, &is->audio_src.ch_layout) ||
-        af->frame->sample_rate   != is->audio_src.freq           ||
+    if (af->frame->format        != audio_src.fmt            ||
+        av_channel_layout_compare(&af->frame->ch_layout, &audio_src.ch_layout) ||
+        af->frame->sample_rate   != audio_src.freq           ||
         (wanted_nb_samples       != af->frame->nb_samples && !swr_ctx)) {
         int ret;
         swr_free(&swr_ctx);
@@ -183,10 +183,10 @@ int audioDecUserLogic::audio_decode_frame(VideoState *is)
             swr_free(&swr_ctx);
             return -1;
         }
-        if (av_channel_layout_copy(&is->audio_src.ch_layout, &af->frame->ch_layout) < 0)
+        if (av_channel_layout_copy(&audio_src.ch_layout, &af->frame->ch_layout) < 0)
             return -1;
-        is->audio_src.freq = af->frame->sample_rate;
-        is->audio_src.fmt = (AVSampleFormat)(af->frame->format);
+        audio_src.freq = af->frame->sample_rate;
+        audio_src.fmt = (AVSampleFormat)(af->frame->format);
     }
 
     if (swr_ctx) {
@@ -479,11 +479,11 @@ int  audioDecUserLogic:: initAudio(int stream_index)
     ic->streams[stream_index]->discard = AVDISCARD_DEFAULT;
             AVFilterContext *sink;
 
-            is->audio_filter_src.freq           = avctx->sample_rate;
-            ret = av_channel_layout_copy(&is->audio_filter_src.ch_layout, &avctx->ch_layout);
+            audio_filter_src.freq           = avctx->sample_rate;
+            ret = av_channel_layout_copy(&audio_filter_src.ch_layout, &avctx->ch_layout);
             if (ret < 0)
                 goto fail;
-            is->audio_filter_src.fmt            = avctx->sample_fmt;
+            audio_filter_src.fmt            = avctx->sample_fmt;
             if ((ret = configure_audio_filters(is, afilters, 0)) < 0)
                 goto fail;
             sink = out_audio_filter;
@@ -497,7 +497,7 @@ int  audioDecUserLogic:: initAudio(int stream_index)
         if ((ret = audio_open(this, &ch_layout, sample_rate, &is->audio_tgt)) < 0)
             goto fail;
         is->audio_hw_buf_size = ret;
-        is->audio_src = is->audio_tgt;
+        audio_src = is->audio_tgt;
         is->audio_buf_size  = 0;
         is->audio_buf_index = 0;
 
@@ -628,23 +628,23 @@ int audioDecUserLogic::onLoopFrame()
             tb.num = 1; tb.den = frame->sample_rate; //tb = (AVRational){1, frame->sample_rate};
 // /*
             reconfigure =
-                cmp_audio_fmts(is->audio_filter_src.fmt, is->audio_filter_src.ch_layout.nb_channels,
+                cmp_audio_fmts(audio_filter_src.fmt, audio_filter_src.ch_layout.nb_channels,
                         (AVSampleFormat)frame->format, frame->ch_layout.nb_channels)    ||
-                av_channel_layout_compare(&is->audio_filter_src.ch_layout, &frame->ch_layout) ||
-                is->audio_filter_src.freq           != frame->sample_rate ||
+                av_channel_layout_compare(&audio_filter_src.ch_layout, &frame->ch_layout) ||
+                audio_filter_src.freq           != frame->sample_rate ||
                 rDecoder.pkt_serial               != last_serial;
 // */
             if (reconfigure) {
                 char buf1[1024], buf2[1024];
-                av_channel_layout_describe(&is->audio_filter_src.ch_layout, buf1, sizeof(buf1));
+                av_channel_layout_describe(&audio_filter_src.ch_layout, buf1, sizeof(buf1));
                 av_channel_layout_describe(&frame->ch_layout, buf2, sizeof(buf2));
                 av_log(NULL, AV_LOG_DEBUG,
                         "Audio frame changed from rate:%d ch:%d fmt:%s layout:%s serial:%d to rate:%d ch:%d fmt:%s layout:%s serial:%d\n",
-                        is->audio_filter_src.freq, is->audio_filter_src.ch_layout.nb_channels, av_get_sample_fmt_name(is->audio_filter_src.fmt), buf1, last_serial,
+                        audio_filter_src.freq, audio_filter_src.ch_layout.nb_channels, av_get_sample_fmt_name(audio_filter_src.fmt), buf1, last_serial,
                         frame->sample_rate, frame->ch_layout.nb_channels, av_get_sample_fmt_name((AVSampleFormat)frame->format), buf2, rDecoder.pkt_serial);
 
-                is->audio_filter_src.fmt            = (AVSampleFormat)frame->format;
-                ret = av_channel_layout_copy(&is->audio_filter_src.ch_layout, &frame->ch_layout);
+                audio_filter_src.fmt            = (AVSampleFormat)frame->format;
+                ret = av_channel_layout_copy(&audio_filter_src.ch_layout, &frame->ch_layout);
                 if (ret < 0) {
 
                     // funSendNeetMsg ();
@@ -652,7 +652,7 @@ int audioDecUserLogic::onLoopFrame()
                     break;
                     // goto the_end;
                 }
-                is->audio_filter_src.freq           = frame->sample_rate;
+                audio_filter_src.freq           = frame->sample_rate;
                 last_serial                         = rDecoder.pkt_serial;
 
                 if ((ret = configure_audio_filters(is, afilters, 1)) < 0) {

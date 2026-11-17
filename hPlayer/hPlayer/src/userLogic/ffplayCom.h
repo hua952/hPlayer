@@ -155,8 +155,10 @@ typedef struct VideoState {
     int audio_write_buf_size;
     int audio_volume;
     int muted;
+    /*
     struct AudioParams audio_src;
     struct AudioParams audio_filter_src;
+    */
     struct AudioParams audio_tgt;
 
     /*

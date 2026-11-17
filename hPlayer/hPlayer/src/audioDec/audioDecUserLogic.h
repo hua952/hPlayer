@@ -37,7 +37,8 @@ public:
     int  initAudio(int stream_index);
 
 private:
-
+    struct AudioParams audio_src;
+    struct AudioParams audio_filter_src;
     struct SwrContext* swr_ctx {nullptr};
     AVFilterGraph *agraph {nullptr};              // audio filter graph
     AVFilterContext *in_audio_filter {nullptr};   // the first filter in the audio chain
@@ -47,5 +48,6 @@ private:
     AVFrame* m_frame {nullptr};
     audioLogicState  m_state{audioLogicState_readNotInit};
 private:
+    int synchronize_audio(VideoState *is, int nb_samples);
     int configure_audio_filters(VideoState *is, const char *afilters, int force_output_format);
 };

@@ -188,8 +188,8 @@ typedef struct VideoState {
     /*int video_stream;
     AVStream *video_st;
     double max_frame_duration;      // maximum duration of a frame - above this, we consider the jump a timestamp discontinuity
-    */
     struct SwsContext *sub_convert_ctx;
+    */
     int eof;
 
     char *filename;

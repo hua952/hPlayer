@@ -331,7 +331,7 @@ void stream_close(VideoState *is)
 
     avformat_close_input(&is->ic);
 
-    sws_freeContext(is->sub_convert_ctx);
+    // sws_freeContext(is->sub_convert_ctx);
     av_free(is->filename);
     if (is->vis_texture)
         SDL_DestroyTexture(is->vis_texture);
@@ -620,6 +620,9 @@ int mainUserLogic::onLoopEnd()
 {
     int nRet = 0;
     do {
+        if(m_sub_convert_ctx) {
+            sws_freeContext(m_sub_convert_ctx);
+        }
     } while (0);
     return nRet;
 }
@@ -735,16 +738,16 @@ void mainUserLogic::cpp_video_image_display(VideoState *is)
                         sub_rect->w = av_clip(sub_rect->w, 0, sp->width  - sub_rect->x);
                         sub_rect->h = av_clip(sub_rect->h, 0, sp->height - sub_rect->y);
 
-                        is->sub_convert_ctx = sws_getCachedContext(is->sub_convert_ctx,
+                        m_sub_convert_ctx = sws_getCachedContext(m_sub_convert_ctx,
                             sub_rect->w, sub_rect->h, AV_PIX_FMT_PAL8,
                             sub_rect->w, sub_rect->h, AV_PIX_FMT_BGRA,
                             0, NULL, NULL, NULL);
-                        if (!is->sub_convert_ctx) {
+                        if (!m_sub_convert_ctx) {
                             av_log(NULL, AV_LOG_FATAL, "Cannot initialize the conversion context\n");
                             return;
                         }
                         if (!SDL_LockTexture(is->sub_texture, (SDL_Rect *)sub_rect, (void **)pixels, pitch)) {
-                            sws_scale(is->sub_convert_ctx, (const uint8_t * const *)sub_rect->data, sub_rect->linesize,
+                            sws_scale(m_sub_convert_ctx, (const uint8_t * const *)sub_rect->data, sub_rect->linesize,
                                       0, sub_rect->h, pixels, pitch);
                             SDL_UnlockTexture(is->sub_texture);
                         }

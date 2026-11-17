@@ -44,7 +44,7 @@ public:
     double  max_frame_duration ();
     void  setMax_frame_duration (double v);
 private:
-
+    // AVStream* subtitle_st{nullptr};
     SDL_Texture* vis_texture{nullptr};
     SDL_Texture* sub_texture{nullptr};
     SDL_Texture* vid_texture{nullptr};

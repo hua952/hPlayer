@@ -306,7 +306,7 @@ static void stream_component_close(VideoState *is, int stream_index)
         rGlobal.setVideoStream(-1);
         break;
     case AVMEDIA_TYPE_SUBTITLE:
-        is->subtitle_st = NULL;
+        // is->subtitle_st = NULL;
         //is->subtitle_stream = -1;
         rGlobal.setSubtitleStream (-1);
         break;
@@ -629,8 +629,10 @@ int mainUserLogic::onLoopEnd()
         SDL_DestroyTexture(vis_texture);
     if (vid_texture)
         SDL_DestroyTexture(vid_texture);
-    if (sub_texture)
+    if (sub_texture){
         SDL_DestroyTexture(sub_texture);
+    }
+        // subtitle_st = nullptr;
     } while (0);
     return nRet;
 }
@@ -720,8 +722,8 @@ void mainUserLogic::cpp_video_image_display(VideoState *is)
         vk_renderer_display(vk_renderer, vp->frame);
         return;
     }
-
-    if (is->subtitle_st) {
+    /*
+    if (subtitle_st) {
         // if (frame_queue_nb_remaining(&is->subpq) > 0) {
         if (rSubpQ.size() > 0) {
             // sp = frame_queue_peek(&is->subpq);
@@ -767,7 +769,7 @@ void mainUserLogic::cpp_video_image_display(VideoState *is)
             rSubpQ.popFrame();
         }
     }
-
+    */
     calculate_display_rect(&rect, xleft(), ytop(), width(), height(), vp->width, vp->height, vp->sar);
     set_sdl_yuv_conversion_mode(vp->frame);
 
@@ -930,16 +932,16 @@ retry:
                     goto retry;
                 }
             }
-
-            if (is->subtitle_st) {
+            /*
+            if (subtitle_st) {
                 // while (frame_queue_nb_remaining(&is->subpq) > 0) {
                 while (rSubpQ.size() > 0) {
                     // sp = frame_queue_peek(&is->subpq);
                     sp = rSubpQ.curFrame ();
-                    /*if (frame_queue_nb_remaining(&is->subpq) > 1)
-                        sp2 = frame_queue_peek_next(&is->subpq);
-                    else
-                        sp2 = NULL;*/
+                    //if (frame_queue_nb_remaining(&is->subpq) > 1)
+                        //sp2 = frame_queue_peek_next(&is->subpq);
+                    //else
+                        //sp2 = NULL;
                     sp2 = rSubpQ.nextFrame();
 
                     if (sp->serial != rSubPackQ.serial()
@@ -969,7 +971,7 @@ retry:
                     }
                 }
             }
-
+            */
             // frame_queue_next(&is->pictq);
             rPictQ.popFrame();
             //is->force_refresh = 1;
@@ -1001,8 +1003,10 @@ display:
                 aqsize = rAudioPackQ.size(); // is->audioq.size;
             if (rGlobal.videoSt())
                 vqsize = rVidPackQ.size();
-            if (is->subtitle_st)
+            /*
+            if (subtitle_st)
                 sqsize = rSubPackQ.size();
+                */
             av_diff = 0;
             if (is->audio_st && rGlobal.videoSt()) {
                 // av_diff = get_clock(&is->audclk) - get_clock(&is->vidclk);

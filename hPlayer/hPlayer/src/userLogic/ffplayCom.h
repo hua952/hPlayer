@@ -180,9 +180,9 @@ typedef struct VideoState {
     SDL_Texture *sub_texture;
     SDL_Texture *vid_texture;
 
-    int subtitle_stream;*/
+    int subtitle_stream;
     AVStream *subtitle_st;
-
+    */
     double frame_timer;
     double frame_last_returned_time;
     double frame_last_filter_delay;

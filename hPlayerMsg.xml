@@ -37,5 +37,11 @@
                 <streamIndex dataType="udword"/>
             </ask>
         </initAudio>
+        <decUpdateToMain>
+            <ask>
+                <max_frame_duration dataType="double"/>
+            </ask>
+        </decUpdateToMain>
+
     </playerData>
 </rpc>

@@ -8,10 +8,10 @@
 
 #include "tSingleton.h"
 
-static double vp_duration(VideoState *is, cppFrame *vp, cppFrame *nextvp) {
+double mainUserLogic::vp_duration(VideoState *is, cppFrame *vp, cppFrame *nextvp) {
     if (vp->serial == nextvp->serial) {
         double duration = nextvp->pts - vp->pts;
-        if (isnan(duration) || duration <= 0 || duration > is->max_frame_duration)
+        if (isnan(duration) || duration <= 0 || duration > max_frame_duration ())
             return vp->duration;
         else
             return duration;
@@ -497,7 +497,7 @@ static void seek_chapter(VideoState *is, int incr)
                                  AV_TIME_BASE_Q), 0, 0);
 }
 
-static double cpp_compute_target_delay(double delay, VideoState *is)
+double mainUserLogic::cpp_compute_target_delay(double delay, VideoState *is)
 {
     double sync_threshold, diff = 0;
     auto& rGlobal = tSingleton<globalData>::single();
@@ -514,7 +514,7 @@ static double cpp_compute_target_delay(double delay, VideoState *is)
            delay to compute the threshold. I still don't know
            if it is the best guess */
         sync_threshold = FFMAX(AV_SYNC_THRESHOLD_MIN, FFMIN(AV_SYNC_THRESHOLD_MAX, delay));
-        if (!isnan(diff) && fabs(diff) < is->max_frame_duration) {
+        if (!isnan(diff) && fabs(diff) < max_frame_duration ()) {
             if (diff <= -sync_threshold)
                 delay = FFMAX(0, delay + diff);
             else if (diff >= sync_threshold && delay > AV_SYNC_FRAMEDUP_THRESHOLD)
@@ -651,24 +651,17 @@ void        mainUserLogic:: clean()
     do {
     } while (0);
 }
-
+/*
 static double compute_target_delay(double delay, VideoState *is)
 {
     double sync_threshold, diff = 0;
 
     auto& rGlobal = tSingleton<globalData>::single();
     auto& rVidClk = rGlobal.vidClk;
-    /* update delay to follow master synchronisation source */
     if (cpp_get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER) {
-        /* if video is slave, we try to correct big delays by
-           duplicating or deleting a frame */
         diff = rVidClk.getClock() - cpp_get_master_clock(is);
-
-        /* skip or repeat frame. We take into account the
-           delay to compute the threshold. I still don't know
-           if it is the best guess */
         sync_threshold = FFMAX(AV_SYNC_THRESHOLD_MIN, FFMIN(AV_SYNC_THRESHOLD_MAX, delay));
-        if (!isnan(diff) && fabs(diff) < is->max_frame_duration) {
+        if (!isnan(diff) && fabs(diff) < max_frame_duration ()) {
             if (diff <= -sync_threshold)
                 delay = FFMAX(0, delay + diff);
             else if (diff >= sync_threshold && delay > AV_SYNC_FRAMEDUP_THRESHOLD)
@@ -677,13 +670,11 @@ static double compute_target_delay(double delay, VideoState *is)
                 delay = 2 * delay;
         }
     }
-
     av_log(NULL, AV_LOG_TRACE, "video: delay=%0.3f A-V=%f\n",
             delay, -diff);
-
     return delay;
 }
-
+*/
 
 static void update_video_pts(VideoState *is, double pts, int serial)
 {
@@ -1349,5 +1340,15 @@ int  mainUserLogic:: step ()
 void  mainUserLogic:: setStep (int v)
 {
     m_step = v;
+}
+
+double  mainUserLogic:: max_frame_duration ()
+{
+    return m_max_frame_duration;
+}
+
+void  mainUserLogic:: setMax_frame_duration (double v)
+{
+    m_max_frame_duration = v;
 }
 

@@ -8,6 +8,7 @@
                 <main mainLoop="1">
                     <procRpc>
                         <playURL askType="ret"/>
+                        <decUpdateToMain askType="ask"/>
                     </procRpc>
                 </main>
                 <decoTh>

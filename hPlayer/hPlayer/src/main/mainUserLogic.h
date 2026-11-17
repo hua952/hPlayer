@@ -1,10 +1,12 @@
 #include "logicWorker.h"
 #include "baseUserLogic.h"
+#include <limits>
 extern "C"
 {
     #include "ffplayCom.h"
 }
 class main;
+class cppFrame;
 class mainUserLogic: public IUserLogicWorker, public baseUserLogic
 {
 public:
@@ -39,7 +41,10 @@ public:
     void  setXpos (int v);
     int  step ();
     void  setStep (int v);
+    double  max_frame_duration ();
+    void  setMax_frame_duration (double v);
 private:
+    double  m_max_frame_duration{std::numeric_limits<double>::quiet_NaN()};
     int  m_step{0};
     int  m_xpos{0};
     int  m_ytop{0};
@@ -50,6 +55,8 @@ private:
     main& m_rmain;
     mainState   m_mainState = mainState_noWindow;
 private:
+    double cpp_compute_target_delay(double delay, VideoState *is);
+    double vp_duration(VideoState *is, cppFrame *vp, cppFrame *nextvp);
     void toggle_pause(VideoState *is);
     void step_to_next_frame(VideoState *is);
     void cpp_video_image_display(VideoState *is);

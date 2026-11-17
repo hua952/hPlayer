@@ -165,9 +165,10 @@ typedef struct VideoState {
     enum ShowMode {
         SHOW_MODE_NONE = -1, SHOW_MODE_VIDEO = 0, SHOW_MODE_WAVES, SHOW_MODE_RDFT, SHOW_MODE_NB
     } a/*show_mode*/;
+
+    /*
     int16_t sample_array[SAMPLE_ARRAY_SIZE];
     int sample_array_index;
-    /*
     int last_i_start;
     AVTXContext *rdft;
     av_tx_fn rdft_fn;

@@ -66,12 +66,17 @@ struct globalData
     void  setShowMode(int v);
     int   vfilterIdx();
     void  setVfilterIdx(int v);
+    int   sample_array_index();
+    void  setSample_array_index(int nI);
+    int16_t*  sample_array();
 private:
+    int16_t m_sample_array[SAMPLE_ARRAY_SIZE];
     AVStream*  m_videoSt{nullptr};
     int  m_subtitleStream{-1};
     int  m_audioStream{-1};
     int  m_videoStream{-1};
 
+    std::atomic<int> m_sample_array_index{0};
     std::atomic<int> m_vfilter_idx{0};
     std::atomic<int> m_show_mode{-1};
     std::atomic<bool> m_paused{false};

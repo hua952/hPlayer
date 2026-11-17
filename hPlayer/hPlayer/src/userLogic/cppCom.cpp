@@ -223,6 +223,21 @@ globalData::globalData ():m_audioPackQ(64), m_subPackQ(10), vidClk(&vidPackQ), m
 {
 }
 
+int    globalData:: sample_array_index()
+{
+    return m_sample_array_index.load(std::memory_order_relaxed);
+}
+
+void   globalData:: setSample_array_index(int nI)
+{
+    m_sample_array_index.store(nI, std::memory_order_relaxed);
+}
+
+int16_t*   globalData:: sample_array()
+{
+    return m_sample_array;
+}
+
 int  globalData:: vfilterIdx()
 {
     return m_vfilter_idx.load(std::memory_order_relaxed);

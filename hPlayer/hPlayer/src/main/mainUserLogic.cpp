@@ -124,15 +124,15 @@ void mainUserLogic::video_audio_display(VideoState *s)
         if (delay < data_used)
             delay = data_used;
 
-        i_start= x = compute_mod(s->sample_array_index - delay * channels, SAMPLE_ARRAY_SIZE);
+        i_start= x = compute_mod(rGlobal.sample_array_index() - delay * channels, SAMPLE_ARRAY_SIZE);
         if (rGlobal.showMode() == VideoState::SHOW_MODE_WAVES) {
             h = INT_MIN;
             for (i = 0; i < 1000; i += channels) {
                 int idx = (SAMPLE_ARRAY_SIZE + x - i) % SAMPLE_ARRAY_SIZE;
-                int a = s->sample_array[idx];
-                int b = s->sample_array[(idx + 4 * channels) % SAMPLE_ARRAY_SIZE];
-                int c = s->sample_array[(idx + 5 * channels) % SAMPLE_ARRAY_SIZE];
-                int d = s->sample_array[(idx + 9 * channels) % SAMPLE_ARRAY_SIZE];
+                int a = rGlobal.sample_array()[idx];
+                int b = rGlobal.sample_array()[(idx + 4 * channels) % SAMPLE_ARRAY_SIZE];
+                int c = rGlobal.sample_array()[(idx + 5 * channels) % SAMPLE_ARRAY_SIZE];
+                int d = rGlobal.sample_array()[(idx + 9 * channels) % SAMPLE_ARRAY_SIZE];
                 int score = a - d;
                 if (h < score && (b ^ c) < 0) {
                     h = score;
@@ -157,7 +157,7 @@ void mainUserLogic::video_audio_display(VideoState *s)
             i = i_start + ch;
             y1 = ytop() + ch * h + (h / 2); /* position of center line */
             for (x = 0; x < width(); x++) {
-                y = (s->sample_array[i] * h2) >> 15;
+                y = (rGlobal.sample_array()[i] * h2) >> 15;
                 if (y < 0) {
                     y = -y;
                     ys = y1 - y;
@@ -211,7 +211,7 @@ void mainUserLogic::video_audio_display(VideoState *s)
                 i = i_start + ch;
                 for (x = 0; x < 2 * nb_freq; x++) {
                     double w = (x-nb_freq) * (1.0 / nb_freq);
-                    data_in[ch][x] = s->sample_array[i] * (1.0 - w * w);
+                    data_in[ch][x] = rGlobal.sample_array()[i] * (1.0 - w * w);
                     i += channels;
                     if (i >= SAMPLE_ARRAY_SIZE)
                         i -= SAMPLE_ARRAY_SIZE;

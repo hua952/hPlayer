@@ -249,17 +249,20 @@ static int audio_decode_frame(VideoState *is)
 static void update_sample_display(VideoState *is, short *samples, int samples_size)
 {
     int size, len;
-
+    auto& rGlobal = tSingleton<globalData>::single();
     size = samples_size / sizeof(short);
     while (size > 0) {
-        len = SAMPLE_ARRAY_SIZE - is->sample_array_index;
+        auto curSample_array_index = rGlobal.sample_array_index();
+        len = SAMPLE_ARRAY_SIZE - curSample_array_index;
         if (len > size)
             len = size;
-        memcpy(is->sample_array + is->sample_array_index, samples, len * sizeof(short));
+        memcpy(rGlobal.sample_array() + curSample_array_index, samples, len * sizeof(short));
         samples += len;
-        is->sample_array_index += len;
-        if (is->sample_array_index >= SAMPLE_ARRAY_SIZE)
-            is->sample_array_index = 0;
+        curSample_array_index += len;
+        if (curSample_array_index >= SAMPLE_ARRAY_SIZE) {
+            curSample_array_index = 0;
+        }
+        rGlobal.setSample_array_index (curSample_array_index);
         size -= len;
     }
 }

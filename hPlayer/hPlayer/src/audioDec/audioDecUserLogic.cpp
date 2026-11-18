@@ -94,15 +94,15 @@ int audioDecUserLogic::synchronize_audio(VideoState *is, int nb_samples)
         diff = rAudclk.getClock() - cpp_get_master_clock(is);
 
         if (!isnan(diff) && fabs(diff) < AV_NOSYNC_THRESHOLD) {
-            is->audio_diff_cum = diff + is->audio_diff_avg_coef * is->audio_diff_cum;
+            audio_diff_cum = diff + audio_diff_avg_coef * audio_diff_cum;
             if (audio_diff_avg_count < AUDIO_DIFF_AVG_NB) {
                 /* not enough measures to have a correct estimate */
                 audio_diff_avg_count++;
             } else {
                 /* estimate the A-V difference */
-                avg_diff = is->audio_diff_cum * (1.0 - is->audio_diff_avg_coef);
+                avg_diff = audio_diff_cum * (1.0 - audio_diff_avg_coef);
 
-                if (fabs(avg_diff) >= is->audio_diff_threshold) {
+                if (fabs(avg_diff) >= audio_diff_threshold) {
                     wanted_nb_samples = nb_samples + (int)(diff * audio_src.freq);
                     min_nb_samples = ((nb_samples * (100 - SAMPLE_CORRECTION_PERCENT_MAX) / 100));
                     max_nb_samples = ((nb_samples * (100 + SAMPLE_CORRECTION_PERCENT_MAX) / 100));
@@ -110,13 +110,13 @@ int audioDecUserLogic::synchronize_audio(VideoState *is, int nb_samples)
                 }
                 av_log(NULL, AV_LOG_TRACE, "diff=%f adiff=%f sample_diff=%d apts=%0.3f %f\n",
                         diff, avg_diff, wanted_nb_samples - nb_samples,
-                        is->audio_clock, is->audio_diff_threshold);
+                        is->audio_clock, audio_diff_threshold);
             }
         } else {
             /* too big difference : may be initial PTS errors, so
                reset A-V filter */
             audio_diff_avg_count = 0;
-            is->audio_diff_cum       = 0;
+            audio_diff_cum       = 0;
         }
     }
 
@@ -231,9 +231,10 @@ int audioDecUserLogic::audio_decode_frame(VideoState *is)
     /* update the audio clock with the pts */
     if (!isnan(af->pts))
         is->audio_clock = af->pts + (double) af->frame->nb_samples / af->frame->sample_rate;
-    else
+    else {
         is->audio_clock = NAN;
-    is->audio_clock_serial = af->serial;
+    }
+    audio_clock_serial = af->serial;
 #ifdef DEBUG
     {
         static double last_clock;
@@ -317,7 +318,7 @@ void audioDecUserLogic::do_sdl_audio_callback(Uint8 *stream, int len)
     rGlobal.setAudio_write_buf_size(audio_buf_size - audio_buf_index);
     /* Let's assume the audio driver that is used by SDL has two periods. */
     if (!isnan(is->audio_clock)) {
-        rAudClk.setClockAt(is->audio_clock - (double)(2 * audio_hw_buf_size + rGlobal.audio_write_buf_size()) / audioTgt().bytes_per_sec, is->audio_clock_serial, audio_callback_time / 1000000.0);
+        rAudClk.setClockAt(is->audio_clock - (double)(2 * audio_hw_buf_size + rGlobal.audio_write_buf_size()) / audioTgt().bytes_per_sec, audio_clock_serial, audio_callback_time / 1000000.0);
         cpp_sync_clock_to_slave(rExtclk, rAudClk);
     }
 }
@@ -517,11 +518,11 @@ int  audioDecUserLogic:: initAudio(int stream_index)
         audio_buf_index = 0;
 
         /* init averaging filter */
-        is->audio_diff_avg_coef  = exp(log(0.01) / AUDIO_DIFF_AVG_NB);
+        audio_diff_avg_coef  = exp(log(0.01) / AUDIO_DIFF_AVG_NB);
         audio_diff_avg_count = 0;
         /* since we do not have a precise anough audio FIFO fullness,
            we correct audio sync only if larger than this threshold */
-        is->audio_diff_threshold = (double)(audio_hw_buf_size) / audioTgt().bytes_per_sec;
+        audio_diff_threshold = (double)(audio_hw_buf_size) / audioTgt().bytes_per_sec;
 
         // is->audio_stream = stream_index;
         rGlobal.setAudioStream(stream_index);

@@ -140,12 +140,11 @@ typedef struct VideoState {
     int av_sync_type;
 
     double audio_clock;
+    /*
     int audio_clock_serial;
-    double audio_diff_cum; /* used for AV difference average computation */
+    double audio_diff_cum;
     double audio_diff_avg_coef;
     double audio_diff_threshold;
-
-    /*
     int audio_diff_avg_count;
     AVStream *audio_st;
     int audio_hw_buf_size;

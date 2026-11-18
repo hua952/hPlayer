@@ -41,6 +41,10 @@ public:
     void  setAudio_buf (uint8_t* v);
     void do_sdl_audio_callback(Uint8 *stream, int len);
 private:
+    int audio_clock_serial{-1};
+    double audio_diff_cum{0};
+    double audio_diff_avg_coef{0};
+    double audio_diff_threshold{0};
     int audio_diff_avg_count{0};
     int audio_hw_buf_size{0};
     int audio_buf_index{0};

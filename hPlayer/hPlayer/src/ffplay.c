@@ -772,7 +772,7 @@ static VideoState *stream_open(const char *filename/*,
     /*init_clock(&is->vidclk, &is->videoq.serial);*/
     /*init_clock(&is->audclk, &is->audioq.serial);*/
     /*init_clock(&is->extclk, &is->extclk.serial);*/
-    is->audio_clock_serial = -1;
+    /*is->audio_clock_serial = -1;*/
     if (startup_volume < 0)
         av_log(NULL, AV_LOG_WARNING, "-volume=%d < 0, setting to 0\n", startup_volume);
     if (startup_volume > 100)

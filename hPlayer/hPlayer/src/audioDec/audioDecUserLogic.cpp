@@ -95,9 +95,9 @@ int audioDecUserLogic::synchronize_audio(VideoState *is, int nb_samples)
 
         if (!isnan(diff) && fabs(diff) < AV_NOSYNC_THRESHOLD) {
             is->audio_diff_cum = diff + is->audio_diff_avg_coef * is->audio_diff_cum;
-            if (is->audio_diff_avg_count < AUDIO_DIFF_AVG_NB) {
+            if (audio_diff_avg_count < AUDIO_DIFF_AVG_NB) {
                 /* not enough measures to have a correct estimate */
-                is->audio_diff_avg_count++;
+                audio_diff_avg_count++;
             } else {
                 /* estimate the A-V difference */
                 avg_diff = is->audio_diff_cum * (1.0 - is->audio_diff_avg_coef);
@@ -115,7 +115,7 @@ int audioDecUserLogic::synchronize_audio(VideoState *is, int nb_samples)
         } else {
             /* too big difference : may be initial PTS errors, so
                reset A-V filter */
-            is->audio_diff_avg_count = 0;
+            audio_diff_avg_count = 0;
             is->audio_diff_cum       = 0;
         }
     }
@@ -518,7 +518,7 @@ int  audioDecUserLogic:: initAudio(int stream_index)
 
         /* init averaging filter */
         is->audio_diff_avg_coef  = exp(log(0.01) / AUDIO_DIFF_AVG_NB);
-        is->audio_diff_avg_count = 0;
+        audio_diff_avg_count = 0;
         /* since we do not have a precise anough audio FIFO fullness,
            we correct audio sync only if larger than this threshold */
         is->audio_diff_threshold = (double)(audio_hw_buf_size) / audioTgt().bytes_per_sec;

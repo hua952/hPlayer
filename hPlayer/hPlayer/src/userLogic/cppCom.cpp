@@ -379,6 +379,11 @@ void  globalData::setAudioSt (AVStream* v)
     m_audio_st = v;
 }
 
+int  globalData:: av_sync_type()
+{
+    return m_av_sync_type;
+}
+
 void cpp_sync_clock_to_slave(cppClock& c, cppClock &rSlave)
 {
     double clock = c.getClock ();
@@ -391,12 +396,12 @@ void cpp_sync_clock_to_slave(cppClock& c, cppClock &rSlave)
 int cpp_get_master_sync_type(VideoState *is)
 {
     auto& rGlobal = tSingleton<globalData>::single();
-    if (is->av_sync_type == AV_SYNC_VIDEO_MASTER) {
+    if (rGlobal.av_sync_type() == AV_SYNC_VIDEO_MASTER) {
         if (rGlobal.videoSt())
             return AV_SYNC_VIDEO_MASTER;
         else
             return AV_SYNC_AUDIO_MASTER;
-    } else if (is->av_sync_type == AV_SYNC_AUDIO_MASTER) {
+    } else if (rGlobal.av_sync_type() == AV_SYNC_AUDIO_MASTER) {
         if (rGlobal.audioSt())
             return AV_SYNC_AUDIO_MASTER;
         else

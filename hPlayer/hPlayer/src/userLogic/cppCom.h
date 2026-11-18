@@ -79,6 +79,7 @@ struct globalData
     void  setAudioVolume(int v);
     int   audio_write_buf_size();
     void  setAudio_write_buf_size(int v);
+    int   av_sync_type();
 private:
     int16_t m_sample_array[SAMPLE_ARRAY_SIZE];
     AVStream*  m_videoSt{nullptr};
@@ -86,7 +87,7 @@ private:
     int  m_subtitleStream{-1};
     int  m_audioStream{-1};
     int  m_videoStream{-1};
-
+    int  m_av_sync_type{AV_SYNC_AUDIO_MASTER};
     std::atomic<int> m_audio_write_buf_size{0};
     std::atomic<int> m_audioVolume{100};
     std::atomic<int> m_frame_drops_early{0};

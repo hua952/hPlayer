@@ -146,7 +146,7 @@ int audioDecUserLogic::audio_decode_frame(VideoState *is)
     do {
 #if defined(_WIN32)
         while (rSampQ.size() == 0) {
-            if ((av_gettime_relative() - audio_callback_time) > 1000000LL * is->audio_hw_buf_size / audioTgt().bytes_per_sec / 2)
+            if ((av_gettime_relative() - audio_callback_time) > 1000000LL * audio_hw_buf_size / audioTgt().bytes_per_sec / 2)
                 return -1;
             av_usleep (1000);
         }
@@ -317,7 +317,7 @@ void audioDecUserLogic::do_sdl_audio_callback(Uint8 *stream, int len)
     rGlobal.setAudio_write_buf_size(audio_buf_size - audio_buf_index);
     /* Let's assume the audio driver that is used by SDL has two periods. */
     if (!isnan(is->audio_clock)) {
-        rAudClk.setClockAt(is->audio_clock - (double)(2 * is->audio_hw_buf_size + rGlobal.audio_write_buf_size()) / audioTgt().bytes_per_sec, is->audio_clock_serial, audio_callback_time / 1000000.0);
+        rAudClk.setClockAt(is->audio_clock - (double)(2 * audio_hw_buf_size + rGlobal.audio_write_buf_size()) / audioTgt().bytes_per_sec, is->audio_clock_serial, audio_callback_time / 1000000.0);
         cpp_sync_clock_to_slave(rExtclk, rAudClk);
     }
 }
@@ -511,7 +511,7 @@ int  audioDecUserLogic:: initAudio(int stream_index)
         upPack->m_audioFreq = audioTgt().freq;
         getServer().sendMsg(upMsg);
         }
-        is->audio_hw_buf_size = ret;
+        audio_hw_buf_size = ret;
         audio_src = audioTgt();
         audio_buf_size  = 0;
         audio_buf_index = 0;
@@ -521,7 +521,7 @@ int  audioDecUserLogic:: initAudio(int stream_index)
         is->audio_diff_avg_count = 0;
         /* since we do not have a precise anough audio FIFO fullness,
            we correct audio sync only if larger than this threshold */
-        is->audio_diff_threshold = (double)(is->audio_hw_buf_size) / audioTgt().bytes_per_sec;
+        is->audio_diff_threshold = (double)(audio_hw_buf_size) / audioTgt().bytes_per_sec;
 
         // is->audio_stream = stream_index;
         rGlobal.setAudioStream(stream_index);

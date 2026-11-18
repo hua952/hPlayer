@@ -64,6 +64,8 @@ struct globalData
     void  setSubtitleStream (int v);
     AVStream*  videoSt ();
     void  setVideoSt (AVStream* v);
+    AVStream*  audioSt ();
+    void  setAudioSt (AVStream* v);
     int   showMode();
     void  setShowMode(int v);
     int   vfilterIdx();
@@ -80,6 +82,7 @@ struct globalData
 private:
     int16_t m_sample_array[SAMPLE_ARRAY_SIZE];
     AVStream*  m_videoSt{nullptr};
+    AVStream*  m_audio_st{nullptr};
     int  m_subtitleStream{-1};
     int  m_audioStream{-1};
     int  m_videoStream{-1};

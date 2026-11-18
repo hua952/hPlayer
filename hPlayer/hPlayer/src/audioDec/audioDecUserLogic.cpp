@@ -525,13 +525,14 @@ int  audioDecUserLogic:: initAudio(int stream_index)
 
         // is->audio_stream = stream_index;
         rGlobal.setAudioStream(stream_index);
-        is->audio_st = ic->streams[stream_index];
+        // is->audio_st = ic->streams[stream_index];
+        rGlobal.setAudioSt(ic->streams[stream_index]);
 
         if ((ret = cpp_decoder_init(rAudDec, avctx, &rAudioPackQ)) < 0)
             goto fail;
         if (is->ic->iformat->flags & AVFMT_NOTIMESTAMPS) {
-            rAudDec.start_pts = is->audio_st->start_time;
-            rAudDec.start_pts_tb = is->audio_st->time_base;
+            rAudDec.start_pts = rGlobal.audioSt()->start_time;
+            rAudDec.start_pts_tb = rGlobal.audioSt()->time_base;
         }
         rAudioPackQ.start();
         /*

@@ -303,7 +303,7 @@ int decoThUserLogic::onLoopFrame()
         }
         if (!pausedCache()&&
             // (!is->audio_st || (is->auddec.finished == is->audioq.serial && frame_queue_nb_remaining(&is->sampq) == 0)) &&
-            (!is->audio_st || (rAudDec.finished == rAudioPackQ.serial() && rSampQ.size() == 0)) &&
+            (!rGlobal.audioSt() || (rAudDec.finished == rAudioPackQ.serial() && rSampQ.size() == 0)) &&
             // (!is->video_st || (is->viddec.finished == is->videoq.serial && frame_queue_nb_remaining(&is->pictq) == 0))) {
             (!rGlobal.videoSt() || (rDecoder.finished == rVidPackQ.serial() && rPictQ.size() == 0))) {
             if (loop != 1 && (!loop || --loop)) {

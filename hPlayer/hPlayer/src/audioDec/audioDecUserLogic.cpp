@@ -110,7 +110,7 @@ int audioDecUserLogic::synchronize_audio(VideoState *is, int nb_samples)
                 }
                 av_log(NULL, AV_LOG_TRACE, "diff=%f adiff=%f sample_diff=%d apts=%0.3f %f\n",
                         diff, avg_diff, wanted_nb_samples - nb_samples,
-                        is->audio_clock, audio_diff_threshold);
+                        audio_clock, audio_diff_threshold);
             }
         } else {
             /* too big difference : may be initial PTS errors, so
@@ -227,21 +227,21 @@ int audioDecUserLogic::audio_decode_frame(VideoState *is)
         resampled_data_size = data_size;
     }
 
-    audio_clock0 = is->audio_clock;
+    audio_clock0 = audio_clock;
     /* update the audio clock with the pts */
     if (!isnan(af->pts))
-        is->audio_clock = af->pts + (double) af->frame->nb_samples / af->frame->sample_rate;
+        audio_clock = af->pts + (double) af->frame->nb_samples / af->frame->sample_rate;
     else {
-        is->audio_clock = NAN;
+        audio_clock = NAN;
     }
     audio_clock_serial = af->serial;
 #ifdef DEBUG
     {
         static double last_clock;
         printf("audio: delay=%0.3f clock=%0.3f clock0=%0.3f\n",
-               is->audio_clock - last_clock,
-               is->audio_clock, audio_clock0);
-        last_clock = is->audio_clock;
+               audio_clock - last_clock,
+               audio_clock, audio_clock0);
+        last_clock = audio_clock;
     }
 #endif
     return resampled_data_size;
@@ -317,8 +317,8 @@ void audioDecUserLogic::do_sdl_audio_callback(Uint8 *stream, int len)
     }
     rGlobal.setAudio_write_buf_size(audio_buf_size - audio_buf_index);
     /* Let's assume the audio driver that is used by SDL has two periods. */
-    if (!isnan(is->audio_clock)) {
-        rAudClk.setClockAt(is->audio_clock - (double)(2 * audio_hw_buf_size + rGlobal.audio_write_buf_size()) / audioTgt().bytes_per_sec, audio_clock_serial, audio_callback_time / 1000000.0);
+    if (!isnan(audio_clock)) {
+        rAudClk.setClockAt(audio_clock - (double)(2 * audio_hw_buf_size + rGlobal.audio_write_buf_size()) / audioTgt().bytes_per_sec, audio_clock_serial, audio_callback_time / 1000000.0);
         cpp_sync_clock_to_slave(rExtclk, rAudClk);
     }
 }

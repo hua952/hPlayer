@@ -139,8 +139,8 @@ typedef struct VideoState {
 
     int av_sync_type;
 
-    double audio_clock;
     /*
+    double audio_clock;
     int audio_clock_serial;
     double audio_diff_cum;
     double audio_diff_avg_coef;

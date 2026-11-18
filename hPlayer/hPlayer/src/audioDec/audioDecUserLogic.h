@@ -42,6 +42,7 @@ public:
     void do_sdl_audio_callback(Uint8 *stream, int len);
 private:
     int audio_clock_serial{-1};
+    double audio_clock{0};
     double audio_diff_cum{0};
     double audio_diff_avg_coef{0};
     double audio_diff_threshold{0};

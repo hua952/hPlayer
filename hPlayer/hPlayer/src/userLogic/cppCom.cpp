@@ -278,6 +278,17 @@ void    globalData :: setAbort(bool a)
     m_abort.store(a, std::memory_order_relaxed);
 }
 
+bool globalData::  muted()
+{
+
+    return m_muted.load(std::memory_order_relaxed);
+}
+
+void  globalData:: setMuted(bool a)
+{
+    m_muted.store(a, std::memory_order_relaxed);
+}
+
 bool    globalData:: paused()
 {
     return m_paused.load(std::memory_order_relaxed);

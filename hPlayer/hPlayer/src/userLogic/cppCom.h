@@ -48,6 +48,8 @@ struct globalData
     frameQue      m_sampQ;
     frameQue      m_subpQ;
 
+    bool   muted();
+    void   setMuted(bool a);
     bool   abort();
     void   setAbort(bool a);
     bool   paused();
@@ -78,6 +80,7 @@ private:
     int  m_audioStream{-1};
     int  m_videoStream{-1};
 
+    std::atomic<bool> m_muted{false};
     std::atomic<int> m_frame_drops_early{0};
     std::atomic<int> m_sample_array_index{0};
     std::atomic<int> m_vfilter_idx{0};

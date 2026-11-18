@@ -66,7 +66,10 @@ void mainUserLogic::toggle_pause(VideoState *is)
 
 static void toggle_mute(VideoState *is)
 {
-    is->muted = !is->muted;
+
+    auto& rGlobal = tSingleton<globalData>::single();
+    rGlobal.setMuted(!rGlobal.muted());
+    // is->muted = !is->muted;
 }
 
 static void update_volume(VideoState *is, int sign, double step)

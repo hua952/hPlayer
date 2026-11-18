@@ -191,7 +191,7 @@ int audioDecUserLogic::audio_decode_frame(VideoState *is)
 
     if (swr_ctx) {
         const uint8_t **in = (const uint8_t **)af->frame->extended_data;
-        uint8_t **out = &is->audio_buf1;
+        uint8_t **out = &audio_buf1;
         int out_count = (int64_t)wanted_nb_samples * audioTgt().freq / af->frame->sample_rate + 256;
         int out_size  = av_samples_get_buffer_size(NULL, audioTgt().ch_layout.nb_channels, out_count, audioTgt().fmt, 0);
         int len2;
@@ -206,8 +206,8 @@ int audioDecUserLogic::audio_decode_frame(VideoState *is)
                 return -1;
             }
         }
-        av_fast_malloc(&is->audio_buf1, &is->audio_buf1_size, out_size);
-        if (!is->audio_buf1)
+        av_fast_malloc(&audio_buf1, &audio_buf1_size, out_size);
+        if (!audio_buf1)
             return AVERROR(ENOMEM);
         len2 = swr_convert(swr_ctx, out, out_count, in, af->frame->nb_samples);
         if (len2 < 0) {
@@ -219,10 +219,11 @@ int audioDecUserLogic::audio_decode_frame(VideoState *is)
             if (swr_init(swr_ctx) < 0)
                 swr_free(&swr_ctx);
         }
-        is->audio_buf = is->audio_buf1;
+        setAudio_buf (audio_buf1);
         resampled_data_size = len2 * audioTgt().ch_layout.nb_channels * av_get_bytes_per_sample(audioTgt().fmt);
     } else {
-        is->audio_buf = af->frame->data[0];
+        // audio_buf = af->frame->data[0];
+        setAudio_buf (af->frame->data[0]);
         resampled_data_size = data_size;
     }
 
@@ -266,51 +267,57 @@ static void update_sample_display(VideoState *is, short *samples, int samples_si
         size -= len;
     }
 }
-/* prepare a new audio buffer */
+
 static void sdl_audio_callback(void *opaque, Uint8 *stream, int len)
+{
+    auto pThis = (audioDecUserLogic*)opaque;
+    pThis->do_sdl_audio_callback(stream, len);
+}
+
+/* prepare a new audio buffer */
+void audioDecUserLogic::do_sdl_audio_callback(Uint8 *stream, int len)
 {
     auto& rGlobal = tSingleton<globalData>::single();
     auto& rAudClk = rGlobal.m_audclk;
     auto& rExtclk = rGlobal.m_extclk;
 
     VideoState *is = getVideoState();
-    auto pThis = (audioDecUserLogic*)opaque;
     int audio_size, len1;
 
     audio_callback_time = av_gettime_relative();
 
     while (len > 0) {
-        if (is->audio_buf_index >= is->audio_buf_size) {
-           audio_size = pThis->audio_decode_frame(is);
+        if (audio_buf_index >= audio_buf_size) {
+           audio_size = audio_decode_frame(is);
            if (audio_size < 0) {
                 /* if error, just output silence */
-               is->audio_buf = NULL;
-               is->audio_buf_size = SDL_AUDIO_MIN_BUFFER_SIZE / pThis->audioTgt().frame_size * pThis->audioTgt().frame_size;
+               setAudio_buf (NULL);
+               audio_buf_size = SDL_AUDIO_MIN_BUFFER_SIZE / audioTgt().frame_size * audioTgt().frame_size;
            } else {
                if (rGlobal.showMode() != VideoState::SHOW_MODE_VIDEO)
-                   update_sample_display(is, (int16_t *)is->audio_buf, audio_size);
-               is->audio_buf_size = audio_size;
+                   update_sample_display(is, (int16_t *)(audio_buf()), audio_size);
+               audio_buf_size = audio_size;
            }
-           is->audio_buf_index = 0;
+           audio_buf_index = 0;
         }
-        len1 = is->audio_buf_size - is->audio_buf_index;
+        len1 = audio_buf_size - audio_buf_index;
         if (len1 > len)
             len1 = len;
-        if (!rGlobal.muted() && is->audio_buf && rGlobal.audioVolume() == SDL_MIX_MAXVOLUME)
-            memcpy(stream, (uint8_t *)is->audio_buf + is->audio_buf_index, len1);
+        if (!rGlobal.muted() && audio_buf() && rGlobal.audioVolume() == SDL_MIX_MAXVOLUME)
+            memcpy(stream, (uint8_t *)(audio_buf()) + audio_buf_index, len1);
         else {
             memset(stream, 0, len1);
-            if (!rGlobal.muted() && is->audio_buf)
-                SDL_MixAudioFormat(stream, (uint8_t *)is->audio_buf + is->audio_buf_index, AUDIO_S16SYS, len1, rGlobal.audioVolume());
+            if (!rGlobal.muted() && audio_buf())
+                SDL_MixAudioFormat(stream, (uint8_t *)(audio_buf()) + audio_buf_index, AUDIO_S16SYS, len1, rGlobal.audioVolume());
         }
         len -= len1;
         stream += len1;
-        is->audio_buf_index += len1;
+        audio_buf_index += len1;
     }
-    is->audio_write_buf_size = is->audio_buf_size - is->audio_buf_index;
+    is->audio_write_buf_size = audio_buf_size - audio_buf_index;
     /* Let's assume the audio driver that is used by SDL has two periods. */
     if (!isnan(is->audio_clock)) {
-        rAudClk.setClockAt(is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / pThis->audioTgt().bytes_per_sec, is->audio_clock_serial, audio_callback_time / 1000000.0);
+        rAudClk.setClockAt(is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / audioTgt().bytes_per_sec, is->audio_clock_serial, audio_callback_time / 1000000.0);
         cpp_sync_clock_to_slave(rExtclk, rAudClk);
     }
 }
@@ -506,8 +513,8 @@ int  audioDecUserLogic:: initAudio(int stream_index)
         }
         is->audio_hw_buf_size = ret;
         audio_src = audioTgt();
-        is->audio_buf_size  = 0;
-        is->audio_buf_index = 0;
+        audio_buf_size  = 0;
+        audio_buf_index = 0;
 
         /* init averaging filter */
         is->audio_diff_avg_coef  = exp(log(0.01) / AUDIO_DIFF_AVG_NB);
@@ -744,6 +751,10 @@ void   audioDecUserLogic:: clean()
         av_frame_free(&m_frame);
 
         swr_free(&swr_ctx);
+        av_freep(&audio_buf1);
+        audio_buf1_size = 0;
+        m_audio_buf = NULL;
+        audio_buf_size = 0;
     } while (0);
 }
 
@@ -766,5 +777,15 @@ audioDecUserLogic::bufQue&   audioDecUserLogic:: getBufQue ()
 struct AudioParams&  audioDecUserLogic:: audioTgt()
 {
     return m_audio_tgt;
+}
+
+uint8_t*  audioDecUserLogic:: audio_buf ()
+{
+    return m_audio_buf;
+}
+
+void  audioDecUserLogic:: setAudio_buf (uint8_t* v)
+{
+    m_audio_buf = v;
 }
 

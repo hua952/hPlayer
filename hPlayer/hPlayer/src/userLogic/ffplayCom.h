@@ -147,13 +147,14 @@ typedef struct VideoState {
     int audio_diff_avg_count;
     AVStream *audio_st;
     int audio_hw_buf_size;
+    /*
     uint8_t *audio_buf;
     uint8_t *audio_buf1;
-    unsigned int audio_buf_size; /* in bytes */
+    unsigned int audio_buf_size;
     unsigned int audio_buf1_size;
-    int audio_buf_index; /* in bytes */
+    int audio_buf_index;
+    */
     int audio_write_buf_size;
-
     /*
     int audio_volume;
     int muted;

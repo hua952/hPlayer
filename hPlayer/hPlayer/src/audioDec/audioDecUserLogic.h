@@ -37,7 +37,15 @@ public:
     int  initAudio(int stream_index);
 
     struct AudioParams& audioTgt();
+    uint8_t*  audio_buf ();
+    void  setAudio_buf (uint8_t* v);
+    void do_sdl_audio_callback(Uint8 *stream, int len);
 private:
+    int audio_buf_index{0};
+    unsigned int audio_buf_size{0};
+    unsigned int audio_buf1_size{0};
+    uint8_t *audio_buf1{nullptr};
+    uint8_t*  m_audio_buf{nullptr};
     struct AudioParams m_audio_tgt;
     struct AudioParams audio_src;
     struct AudioParams audio_filter_src;

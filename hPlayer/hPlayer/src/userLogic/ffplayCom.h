@@ -158,10 +158,8 @@ typedef struct VideoState {
     /*
     struct AudioParams audio_src;
     struct AudioParams audio_filter_src;
-    */
     struct AudioParams audio_tgt;
 
-    /*
     struct SwrContext *swr_ctx;
     int frame_drops_early;
     int frame_drops_late;

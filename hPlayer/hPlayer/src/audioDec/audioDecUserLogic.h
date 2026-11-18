@@ -36,7 +36,9 @@ public:
     logicWorker&  worker() override;
     int  initAudio(int stream_index);
 
+    struct AudioParams& audioTgt();
 private:
+    struct AudioParams m_audio_tgt;
     struct AudioParams audio_src;
     struct AudioParams audio_filter_src;
     struct SwrContext* swr_ctx {nullptr};

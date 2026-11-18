@@ -9,6 +9,7 @@
                     <procRpc>
                         <playURL askType="ret"/>
                         <decUpdateToMain askType="ask"/>
+                        <audioUpdateToMain askType="ask"/>
                     </procRpc>
                 </main>
                 <decoTh>

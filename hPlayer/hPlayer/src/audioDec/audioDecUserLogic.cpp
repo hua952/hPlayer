@@ -51,10 +51,10 @@ int audioDecUserLogic::configure_audio_filters(VideoState *is, const char *afilt
 
     if (force_output_format) {
         if ((ret = av_opt_set_array(filt_asink, "channel_layouts", AV_OPT_SEARCH_CHILDREN,
-                                    0, 1, AV_OPT_TYPE_CHLAYOUT, &is->audio_tgt.ch_layout)) < 0)
+                                    0, 1, AV_OPT_TYPE_CHLAYOUT, &audioTgt().ch_layout)) < 0)
             goto end;
         if ((ret = av_opt_set_array(filt_asink, "samplerates", AV_OPT_SEARCH_CHILDREN,
-                                    0, 1, AV_OPT_TYPE_INT, &is->audio_tgt.freq)) < 0)
+                                    0, 1, AV_OPT_TYPE_INT, &audioTgt().freq)) < 0)
             goto end;
     }
 
@@ -146,7 +146,7 @@ int audioDecUserLogic::audio_decode_frame(VideoState *is)
     do {
 #if defined(_WIN32)
         while (rSampQ.size() == 0) {
-            if ((av_gettime_relative() - audio_callback_time) > 1000000LL * is->audio_hw_buf_size / is->audio_tgt.bytes_per_sec / 2)
+            if ((av_gettime_relative() - audio_callback_time) > 1000000LL * is->audio_hw_buf_size / audioTgt().bytes_per_sec / 2)
                 return -1;
             av_usleep (1000);
         }
@@ -172,14 +172,14 @@ int audioDecUserLogic::audio_decode_frame(VideoState *is)
         int ret;
         swr_free(&swr_ctx);
         ret = swr_alloc_set_opts2(&swr_ctx,
-                            &is->audio_tgt.ch_layout, is->audio_tgt.fmt, is->audio_tgt.freq,
+                            &audioTgt().ch_layout, audioTgt().fmt, audioTgt().freq,
                             &af->frame->ch_layout, (AVSampleFormat)(af->frame->format), af->frame->sample_rate,
                             0, NULL);
         if (ret < 0 || swr_init(swr_ctx) < 0) {
             av_log(NULL, AV_LOG_ERROR,
                    "Cannot create sample rate converter for conversion of %d Hz %s %d channels to %d Hz %s %d channels!\n",
                     af->frame->sample_rate, av_get_sample_fmt_name((AVSampleFormat)(af->frame->format)), af->frame->ch_layout.nb_channels,
-                    is->audio_tgt.freq, av_get_sample_fmt_name((AVSampleFormat)(is->audio_tgt.fmt)), is->audio_tgt.ch_layout.nb_channels);
+                    audioTgt().freq, av_get_sample_fmt_name((AVSampleFormat)(audioTgt().fmt)), audioTgt().ch_layout.nb_channels);
             swr_free(&swr_ctx);
             return -1;
         }
@@ -192,16 +192,16 @@ int audioDecUserLogic::audio_decode_frame(VideoState *is)
     if (swr_ctx) {
         const uint8_t **in = (const uint8_t **)af->frame->extended_data;
         uint8_t **out = &is->audio_buf1;
-        int out_count = (int64_t)wanted_nb_samples * is->audio_tgt.freq / af->frame->sample_rate + 256;
-        int out_size  = av_samples_get_buffer_size(NULL, is->audio_tgt.ch_layout.nb_channels, out_count, is->audio_tgt.fmt, 0);
+        int out_count = (int64_t)wanted_nb_samples * audioTgt().freq / af->frame->sample_rate + 256;
+        int out_size  = av_samples_get_buffer_size(NULL, audioTgt().ch_layout.nb_channels, out_count, audioTgt().fmt, 0);
         int len2;
         if (out_size < 0) {
             av_log(NULL, AV_LOG_ERROR, "av_samples_get_buffer_size() failed\n");
             return -1;
         }
         if (wanted_nb_samples != af->frame->nb_samples) {
-            if (swr_set_compensation(swr_ctx, (wanted_nb_samples - af->frame->nb_samples) * is->audio_tgt.freq / af->frame->sample_rate,
-                                        wanted_nb_samples * is->audio_tgt.freq / af->frame->sample_rate) < 0) {
+            if (swr_set_compensation(swr_ctx, (wanted_nb_samples - af->frame->nb_samples) * audioTgt().freq / af->frame->sample_rate,
+                                        wanted_nb_samples * audioTgt().freq / af->frame->sample_rate) < 0) {
                 av_log(NULL, AV_LOG_ERROR, "swr_set_compensation() failed\n");
                 return -1;
             }
@@ -220,7 +220,7 @@ int audioDecUserLogic::audio_decode_frame(VideoState *is)
                 swr_free(&swr_ctx);
         }
         is->audio_buf = is->audio_buf1;
-        resampled_data_size = len2 * is->audio_tgt.ch_layout.nb_channels * av_get_bytes_per_sample(is->audio_tgt.fmt);
+        resampled_data_size = len2 * audioTgt().ch_layout.nb_channels * av_get_bytes_per_sample(audioTgt().fmt);
     } else {
         is->audio_buf = af->frame->data[0];
         resampled_data_size = data_size;
@@ -285,7 +285,7 @@ static void sdl_audio_callback(void *opaque, Uint8 *stream, int len)
            if (audio_size < 0) {
                 /* if error, just output silence */
                is->audio_buf = NULL;
-               is->audio_buf_size = SDL_AUDIO_MIN_BUFFER_SIZE / is->audio_tgt.frame_size * is->audio_tgt.frame_size;
+               is->audio_buf_size = SDL_AUDIO_MIN_BUFFER_SIZE / pThis->audioTgt().frame_size * pThis->audioTgt().frame_size;
            } else {
                if (rGlobal.showMode() != VideoState::SHOW_MODE_VIDEO)
                    update_sample_display(is, (int16_t *)is->audio_buf, audio_size);
@@ -310,7 +310,7 @@ static void sdl_audio_callback(void *opaque, Uint8 *stream, int len)
     is->audio_write_buf_size = is->audio_buf_size - is->audio_buf_index;
     /* Let's assume the audio driver that is used by SDL has two periods. */
     if (!isnan(is->audio_clock)) {
-        rAudClk.setClockAt(is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / is->audio_tgt.bytes_per_sec, is->audio_clock_serial, audio_callback_time / 1000000.0);
+        rAudClk.setClockAt(is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / pThis->audioTgt().bytes_per_sec, is->audio_clock_serial, audio_callback_time / 1000000.0);
         cpp_sync_clock_to_slave(rExtclk, rAudClk);
     }
 }
@@ -494,10 +494,18 @@ int  audioDecUserLogic:: initAudio(int stream_index)
         
 
         /* prepare audio output */
-        if ((ret = audio_open(this, &ch_layout, sample_rate, &is->audio_tgt)) < 0)
+        if ((ret = audio_open(this, &ch_layout, sample_rate, &m_audio_tgt)) < 0) {
             goto fail;
+        }
+        {
+        audioUpdateToMainAskMsg  upMsg;
+        auto upPack = upMsg.pack();
+        upPack->m_audioChannels = audioTgt().ch_layout.nb_channels;
+        upPack->m_audioFreq = audioTgt().freq;
+        getServer().sendMsg(upMsg);
+        }
         is->audio_hw_buf_size = ret;
-        audio_src = is->audio_tgt;
+        audio_src = audioTgt();
         is->audio_buf_size  = 0;
         is->audio_buf_index = 0;
 
@@ -506,7 +514,7 @@ int  audioDecUserLogic:: initAudio(int stream_index)
         is->audio_diff_avg_count = 0;
         /* since we do not have a precise anough audio FIFO fullness,
            we correct audio sync only if larger than this threshold */
-        is->audio_diff_threshold = (double)(is->audio_hw_buf_size) / is->audio_tgt.bytes_per_sec;
+        is->audio_diff_threshold = (double)(is->audio_hw_buf_size) / audioTgt().bytes_per_sec;
 
         // is->audio_stream = stream_index;
         rGlobal.setAudioStream(stream_index);
@@ -753,5 +761,10 @@ void   audioDecUserLogic:: setState(audioLogicState st)
 audioDecUserLogic::bufQue&   audioDecUserLogic:: getBufQue ()
 {
     return m_bufQue;
+}
+
+struct AudioParams&  audioDecUserLogic:: audioTgt()
+{
+    return m_audio_tgt;
 }
 

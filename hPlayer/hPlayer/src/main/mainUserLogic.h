@@ -43,7 +43,13 @@ public:
     void  setStep (int v);
     double  max_frame_duration ();
     void  setMax_frame_duration (double v);
+    int  audioChannels ();
+    void  setAudioChannels (int v);
+    int  audioFreq ();
+    void  setAudioFreq (int v);
 private:
+    int  m_audioFreq{0};
+    int  m_audioChannels{0};
     int frame_drops_late{0};
     int last_i_start{0};
     AVTXContext* rdft{nullptr};

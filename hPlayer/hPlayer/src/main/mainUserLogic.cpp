@@ -105,7 +105,7 @@ void mainUserLogic::video_audio_display(VideoState *s)
     nb_freq = 1 << (rdft_bits - 1);
 
     /* compute display index : center on currently output samples */
-    channels = s->audio_tgt.ch_layout.nb_channels;
+    channels = audioChannels(); //s->audio_tgt.ch_layout.nb_channels;
     nb_display_channels = channels;
     if (!rGlobal.paused()) {
         int data_used= rGlobal.showMode() == VideoState::SHOW_MODE_WAVES ? width() : (2*nb_freq);
@@ -117,7 +117,7 @@ void mainUserLogic::video_audio_display(VideoState *s)
            the last buffer computation */
         if (audio_callback_time) {
             time_diff = av_gettime_relative() - audio_callback_time;
-            delay -= (time_diff * s->audio_tgt.freq) / 1000000;
+            delay -= (time_diff * audioFreq()) / 1000000;
         }
 
         delay += 2 * data_used;
@@ -1369,5 +1369,25 @@ double  mainUserLogic:: max_frame_duration ()
 void  mainUserLogic:: setMax_frame_duration (double v)
 {
     m_max_frame_duration = v;
+}
+
+int  mainUserLogic:: audioChannels ()
+{
+    return m_audioChannels;
+}
+
+void  mainUserLogic:: setAudioChannels (int v)
+{
+    m_audioChannels = v;
+}
+
+int  mainUserLogic:: audioFreq ()
+{
+    return m_audioFreq;
+}
+
+void  mainUserLogic:: setAudioFreq (int v)
+{
+    m_audioFreq = v;
 }
 

@@ -268,6 +268,17 @@ void  globalData::setShowMode(int v)
     m_show_mode.store(v, std::memory_order_relaxed);
 }
 
+int  globalData:: audioVolume()
+{
+
+    return m_audioVolume.load(std::memory_order_relaxed);
+}
+
+void  globalData::setAudioVolume(int v)
+{
+    m_audioVolume.store(v, std::memory_order_relaxed);
+}
+
 bool    globalData:: abort()
 {
     return m_abort.load(std::memory_order_relaxed);

@@ -75,6 +75,8 @@ struct globalData
     void   setFrame_drops_early(int nI);
     int   audioVolume();
     void  setAudioVolume(int v);
+    int   audio_write_buf_size();
+    void  setAudio_write_buf_size(int v);
 private:
     int16_t m_sample_array[SAMPLE_ARRAY_SIZE];
     AVStream*  m_videoSt{nullptr};
@@ -82,6 +84,7 @@ private:
     int  m_audioStream{-1};
     int  m_videoStream{-1};
 
+    std::atomic<int> m_audio_write_buf_size{0};
     std::atomic<int> m_audioVolume{100};
     std::atomic<int> m_frame_drops_early{0};
     std::atomic<int> m_sample_array_index{0};

@@ -314,10 +314,10 @@ void audioDecUserLogic::do_sdl_audio_callback(Uint8 *stream, int len)
         stream += len1;
         audio_buf_index += len1;
     }
-    is->audio_write_buf_size = audio_buf_size - audio_buf_index;
+    rGlobal.setAudio_write_buf_size(audio_buf_size - audio_buf_index);
     /* Let's assume the audio driver that is used by SDL has two periods. */
     if (!isnan(is->audio_clock)) {
-        rAudClk.setClockAt(is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / audioTgt().bytes_per_sec, is->audio_clock_serial, audio_callback_time / 1000000.0);
+        rAudClk.setClockAt(is->audio_clock - (double)(2 * is->audio_hw_buf_size + rGlobal.audio_write_buf_size()) / audioTgt().bytes_per_sec, is->audio_clock_serial, audio_callback_time / 1000000.0);
         cpp_sync_clock_to_slave(rExtclk, rAudClk);
     }
 }

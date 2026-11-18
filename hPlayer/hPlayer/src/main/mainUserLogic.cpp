@@ -116,7 +116,7 @@ void mainUserLogic::video_audio_display(VideoState *s)
     if (!rGlobal.paused()) {
         int data_used= rGlobal.showMode() == VideoState::SHOW_MODE_WAVES ? width() : (2*nb_freq);
         n = 2 * channels;
-        delay = s->audio_write_buf_size;
+        delay = rGlobal.audio_write_buf_size();
         delay /= n;
 
         /* to be more precise, we take into account the time spent since

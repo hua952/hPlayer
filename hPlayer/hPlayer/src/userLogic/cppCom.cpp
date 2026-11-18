@@ -270,13 +270,22 @@ void  globalData::setShowMode(int v)
 
 int  globalData:: audioVolume()
 {
-
     return m_audioVolume.load(std::memory_order_relaxed);
 }
 
 void  globalData::setAudioVolume(int v)
 {
     m_audioVolume.store(v, std::memory_order_relaxed);
+}
+
+int  globalData:: audio_write_buf_size()
+{
+    return m_audio_write_buf_size.load(std::memory_order_relaxed);
+}
+
+void  globalData::setAudio_write_buf_size(int v)
+{
+    m_audio_write_buf_size.store(v, std::memory_order_relaxed);
 }
 
 bool    globalData:: abort()

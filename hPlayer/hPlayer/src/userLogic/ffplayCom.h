@@ -153,9 +153,7 @@ typedef struct VideoState {
     unsigned int audio_buf_size;
     unsigned int audio_buf1_size;
     int audio_buf_index;
-    */
     int audio_write_buf_size;
-    /*
     int audio_volume;
     int muted;
     struct AudioParams audio_src;

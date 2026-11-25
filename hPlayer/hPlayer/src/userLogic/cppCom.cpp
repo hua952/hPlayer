@@ -384,6 +384,16 @@ int  globalData:: av_sync_type()
     return m_av_sync_type;
 }
 
+int  globalData:: realtime ()
+{
+    return m_realtime;
+}
+
+void  globalData:: setRealtime (int v)
+{
+    m_realtime = v;
+}
+
 void cpp_sync_clock_to_slave(cppClock& c, cppClock &rSlave)
 {
     double clock = c.getClock ();

@@ -592,8 +592,8 @@ int  decoThUserLogic:: initThis()
             }
         }
 
-        is->realtime = is_realtime(ic);
-
+        auto rt = is_realtime(ic);
+        rGlobal.setRealtime(rt);
         if (show_status)
             av_dump_format(ic, 0, is->filename, 0);
 
@@ -670,7 +670,7 @@ int  decoThUserLogic:: initThis()
             nRet = procPacketFunRetType_exitNow;
             break;
         }
-        if (infinite_buffer < 0 && is->realtime) {
+        if (infinite_buffer < 0 && rGlobal.realtime()) {
             infinite_buffer = 1;
         }
     } while (0);

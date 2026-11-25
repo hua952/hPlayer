@@ -80,7 +80,10 @@ struct globalData
     int   audio_write_buf_size();
     void  setAudio_write_buf_size(int v);
     int   av_sync_type();
+    int  realtime ();
+    void  setRealtime (int v);
 private:
+    int  m_realtime;
     int16_t m_sample_array[SAMPLE_ARRAY_SIZE];
     AVStream*  m_videoSt{nullptr};
     AVStream*  m_audio_st{nullptr};

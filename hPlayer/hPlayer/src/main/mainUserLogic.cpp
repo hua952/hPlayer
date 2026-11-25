@@ -871,7 +871,7 @@ void mainUserLogic::cpp_video_refresh(void *opaque, double *remaining_time)
     auto& rSubPackQ = rGlobal.m_subPackQ;
 
     cppFrame *sp, *sp2;
-    if (!rGlobal.paused() && cpp_get_master_sync_type(is) == AV_SYNC_EXTERNAL_CLOCK && is->realtime) {
+    if (!rGlobal.paused() && cpp_get_master_sync_type(is) == AV_SYNC_EXTERNAL_CLOCK && rGlobal.realtime()) {
         /*check_external_clock_speed(is);*/
         cpp_check_external_clock_speed(is);
     }

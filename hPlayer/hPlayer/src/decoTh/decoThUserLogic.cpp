@@ -153,7 +153,7 @@ int  decoThUserLogic:: cpp_stream_component_open_base(int stream_index)
             rWork.sendMsg(msg);
         }
         */
-        is->queue_attachments_req = 1;
+        queue_attachments_req = 1;
         break;
     case AVMEDIA_TYPE_SUBTITLE:
         break;
@@ -257,14 +257,14 @@ int decoThUserLogic::onLoopFrame()
                 }
             }
             is->seek_req = 0;
-            is->queue_attachments_req = 1;
+            queue_attachments_req = 1;
             is->eof = 0;
             /*
             if (pausedCache())
                 step_to_next_frame(is);
                 */
         }
-        if (is->queue_attachments_req) {
+        if (queue_attachments_req) {
             if (rGlobal.videoSt() && rGlobal.videoSt()->disposition & AV_DISPOSITION_ATTACHED_PIC) {
                 if ((ret = av_packet_ref(pkt, &rGlobal.videoSt()->attached_pic)) < 0) {
                     // sendExitNtfToSub();
@@ -284,7 +284,7 @@ int decoThUserLogic::onLoopFrame()
                 */
                 // packet_queue_put_nullpacket(&is->videoq, pkt, is->video_stream);
             }
-            is->queue_attachments_req = 0;
+            queue_attachments_req = 0;
         }
 
         /* if the queue are full, no need to read more */

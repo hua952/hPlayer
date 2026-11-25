@@ -37,7 +37,7 @@ public:
     bool  pausedCache ();
     void  setPausedCache (bool v);
 private:
-    int  cpp_stream_component_open_base(int stream_index);
+    int queue_attachments_req{0};
     bool  m_pausedCache{false};
     decoTh& m_rdecoTh;
     readState  m_readState {readState_mainNotInit};
@@ -45,4 +45,6 @@ private:
     // SDL_mutex* m_wait_mutex= nullptr;
     AVPacket* m_pkt = nullptr;
     int        m_ret = 0;
+private:
+    int  cpp_stream_component_open_base(int stream_index);
 };

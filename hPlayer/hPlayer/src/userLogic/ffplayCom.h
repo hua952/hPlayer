@@ -124,8 +124,9 @@ typedef struct VideoState {
     /*const AVInputFormat *iformat;*/
     /*int force_refresh;*/
     /*int paused;*/
-    /*int last_paused;*/
+    /*int last_paused;
     int queue_attachments_req;
+*/
     int seek_req;
     int seek_flags;
     int64_t seek_pos;
@@ -133,8 +134,6 @@ typedef struct VideoState {
     int read_pause_return;
     AVFormatContext *ic;
     int realtime;
-
-
     /*int audio_stream;
     int av_sync_type;
     double audio_clock;

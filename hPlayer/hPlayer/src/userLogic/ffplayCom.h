@@ -190,9 +190,9 @@ typedef struct VideoState {
     struct SwsContext *sub_convert_ctx;
     */
     int eof;
-
+    /*
     char *filename;
-    /*int width, height, xleft, ytop;
+    int width, height, xleft, ytop;
     int step;
 
     int vfilter_idx;
@@ -300,5 +300,6 @@ int realloc_texture(SDL_Texture **texture, Uint32 new_format, int new_width, int
 struct TextureFormatEntry*  getFormatEntry(int* num);
 int configure_filtergraph(AVFilterGraph *graph, const char *filtergraph,
                                  AVFilterContext *source_ctx, AVFilterContext *sink_ctx);
+VideoState* cpp_stream_open(const char *filename);
 
 #endif

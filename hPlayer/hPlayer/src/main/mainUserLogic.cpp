@@ -335,8 +335,8 @@ void stream_close(VideoState *is)
     avformat_close_input(&is->ic);
 
     // sws_freeContext(is->sub_convert_ctx);
-    av_free(is->filename);
 /*    
+    av_free(is->filename);
     if (is->vis_texture)
         SDL_DestroyTexture(is->vis_texture);
     if (is->vid_texture)

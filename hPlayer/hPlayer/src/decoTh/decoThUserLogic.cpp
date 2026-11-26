@@ -508,9 +508,9 @@ int  decoThUserLogic:: initThis()
         if(arg){
             file_iformat = av_find_input_format(arg);
         }
-        err = avformat_open_input(&ic, is->filename, file_iformat, &format_opts);
+        err = avformat_open_input(&ic, rGlobal.fileName(), file_iformat, &format_opts);
         if (err < 0) {
-            print_error(is->filename, err);
+            print_error(rGlobal.fileName(), err);
             ret = -1;
             // goto fail;
             nRet = procPacketFunRetType_exitNow;
@@ -553,7 +553,7 @@ int  decoThUserLogic:: initThis()
 
             if (err < 0) {
                 av_log(NULL, AV_LOG_WARNING,
-                        "%s: could not find codec parameters\n", is->filename);
+                        "%s: could not find codec parameters\n", rGlobal.fileName());
                 ret = -1;
                 //goto fail;
                 nRet = procPacketFunRetType_exitNow;
@@ -588,14 +588,14 @@ int  decoThUserLogic:: initThis()
             ret = avformat_seek_file(ic, -1, INT64_MIN, timestamp, INT64_MAX, 0);
             if (ret < 0) {
                 av_log(NULL, AV_LOG_WARNING, "%s: could not seek to position %0.3f\n",
-                        is->filename, (double)timestamp / AV_TIME_BASE);
+                        rGlobal.fileName(), (double)timestamp / AV_TIME_BASE);
             }
         }
 
         auto rt = is_realtime(ic);
         rGlobal.setRealtime(rt);
         if (show_status)
-            av_dump_format(ic, 0, is->filename, 0);
+            av_dump_format(ic, 0, rGlobal.fileName(), 0);
 
         for (i = 0; i < ic->nb_streams; i++) {
             AVStream *st = ic->streams[i];
@@ -664,7 +664,7 @@ int  decoThUserLogic:: initThis()
         }
         if (rGlobal.videoStream() < 0 && rGlobal.audioStream() < 0) {
             av_log(NULL, AV_LOG_FATAL, "Failed to open file '%s' or configure filtergraph\n",
-                    is->filename);
+                    rGlobal.fileName());
             ret = -1;
             //goto fail;
             nRet = procPacketFunRetType_exitNow;

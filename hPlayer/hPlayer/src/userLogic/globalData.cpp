@@ -178,3 +178,14 @@ void  globalData:: setRealtime (int v)
 {
     m_realtime = v;
 }
+
+const char*  globalData:: fileName ()
+{
+    return m_fileName.get ();
+}
+
+void  globalData:: setFileName (const char* v)
+{
+    strCpy (v, m_fileName);
+}
+

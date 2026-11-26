@@ -77,7 +77,10 @@ public:
     int   av_sync_type();
     int  realtime ();
     void  setRealtime (int v);
+    const char*  fileName ();
+    void  setFileName (const char* v);
 private:
+    std::unique_ptr<char[]>  m_fileName;
     int  m_realtime;
     int16_t m_sample_array[SAMPLE_ARRAY_SIZE];
     AVStream*  m_videoSt{nullptr};
